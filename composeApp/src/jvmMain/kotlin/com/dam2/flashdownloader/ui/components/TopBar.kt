@@ -1,18 +1,9 @@
 package com.dam2.flashdownloader.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.PauseCircle
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
