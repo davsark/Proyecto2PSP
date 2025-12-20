@@ -243,7 +243,7 @@ class DownloadManagerImpl(
             _downloadsList.filter { it.status is DownloadStatus.Paused }.map { it.id }
         }
         pausedIds.forEach { resumeDownload(it) }
-        Result.success(Unit)
+        return Result.success(Unit)
     }
 
     override suspend fun cancelAll(): Result<Unit> = downloadsMutex.withLock {
@@ -321,12 +321,12 @@ class DownloadManagerImpl(
             processQueue()
         }
 
-        Result.success(Unit)
+        return Result.success(Unit)
     }
 
     override suspend fun setGlobalSpeedLimit(bytesPerSecond: Long?): Result<Unit> {
         _globalSpeedLimit.value = bytesPerSecond
-        Result.success(Unit)
+        return Result.success(Unit)
     }
 
     override suspend fun setDownloadSpeedLimit(id: String, bytesPerSecond: Long?): Result<Unit> = downloadsMutex.withLock {
@@ -410,7 +410,7 @@ class DownloadManagerImpl(
                 fileWriter = fileWriter
             ).collect { progress ->
                 // Verificar cancelación
-                ensureActive()
+                currentCoroutineContext().ensureActive()
 
                 // Actualizar estado con progreso
                 updateDownloadStatus(
