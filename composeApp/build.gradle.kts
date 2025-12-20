@@ -97,6 +97,12 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
+
+    // Forzar inclusión de dependencias en runtime para JVM Desktop
+    "jvmRuntimeOnly"(libs.kotlinx.datetime)
+    "jvmRuntimeOnly"(libs.kotlinx.serialization.json)
+    "jvmRuntimeOnly"(libs.ktor.client.core)
+    "jvmRuntimeOnly"(libs.ktor.client.cio)
 }
 
 compose.desktop {
@@ -107,6 +113,14 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.dam2.flashdownloader"
             packageVersion = "1.0.0"
+
+            // Incluir todas las dependencias necesarias
+            modules("java.sql", "jdk.unsupported")
+        }
+
+        // Configuración de runtime para incluir todas las dependencias
+        buildTypes.release.proguard {
+            isEnabled.set(false)
         }
     }
 }
