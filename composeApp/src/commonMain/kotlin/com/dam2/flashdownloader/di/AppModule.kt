@@ -5,6 +5,7 @@ import com.dam2.flashdownloader.data.network.DownloadClient
 import com.dam2.flashdownloader.data.repository.DownloadRepositoryImpl
 import com.dam2.flashdownloader.domain.manager.DownloadManager
 import com.dam2.flashdownloader.domain.repository.DownloadRepository
+import com.dam2.flashdownloader.presentation.viewmodel.DownloadViewModel
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import kotlinx.coroutines.CoroutineScope
@@ -12,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 /**
@@ -51,8 +53,16 @@ fun commonModule() = module {
             downloadClient = get(),
             repository = get(),
             fileWriterFactory = get(),
-            downloadPath = get(),
+            downloadPath = get(named("downloadPath")),
             scope = get()
+        )
+    }
+
+    // ViewModel
+    single {
+        DownloadViewModel(
+            downloadManager = get(),
+            clipboardManager = get()
         )
     }
 }
