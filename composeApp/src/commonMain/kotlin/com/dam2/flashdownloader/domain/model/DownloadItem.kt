@@ -1,7 +1,5 @@
 package com.dam2.flashdownloader.domain.model
 
-import kotlinx.datetime.Clock
-
 /**
  * Modelo de dominio que representa una descarga individual
  */
@@ -12,7 +10,7 @@ data class DownloadItem(
     val category: Category,
     val priority: Priority,
     val status: DownloadStatus,
-    val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
+    val createdAt: Long, // Timestamp en milisegundos - debe ser pasado por el llamador
     val speedLimit: Long? = null, // bytes/segundo, null = sin límite
     val localPath: String? = null,
     val hash: String? = null, // Para verificación de integridad

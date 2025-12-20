@@ -12,8 +12,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 /**
  * Implementación completa del DownloadManager con control avanzado de concurrencia
@@ -27,7 +25,6 @@ import kotlin.uuid.Uuid
  * - Cancelación cooperativa
  * - Persistencia automática
  */
-@OptIn(ExperimentalUuidApi::class)
 class DownloadManagerImpl(
     private val downloadClient: DownloadClient,
     private val repository: DownloadRepository,
@@ -97,22 +94,19 @@ class DownloadManagerImpl(
                 return Result.failure(IllegalArgumentException("URL inválida: $url"))
             }
 
-            // Obtener metadata del servidor
-            val metadataResult = downloadClient.getFileMetadata(url)
-            val metadata = metadataResult.getOrNull()
-
-            // Determinar nombre de archivo
-            val finalFileName = fileName
-                ?: metadata?.serverFileName
-                ?: extractFileNameFromUrl(url)
+            // Determinar nombre de archivo (sin llamada de red bloqueante)
+            val finalFileName = fileName ?: extractFileNameFromUrl(url)
 
             // Determinar categoría
             val finalCategory = category ?: Category.fromFileName(finalFileName)
 
-            // Crear ID único
-            val id = Uuid.random().toString()
+            // Crear ID único usando java.util.UUID (más compatible)
+            val id = java.util.UUID.randomUUID().toString()
 
-            // Crear item de descarga
+            // Obtener timestamp actual
+            val currentTime = System.currentTimeMillis()
+
+            // Crear item de descarga (metadata se obtendrá durante la descarga)
             val downloadItem = DownloadItem(
                 id = id,
                 url = url,
@@ -120,8 +114,9 @@ class DownloadManagerImpl(
                 category = finalCategory,
                 priority = priority,
                 status = DownloadStatus.Queued,
+                createdAt = currentTime,
                 speedLimit = speedLimit,
-                metadata = metadata ?: DownloadMetadata()
+                metadata = DownloadMetadata() // Se actualizará cuando inicie la descarga
             )
 
             // Añadir a la lista
