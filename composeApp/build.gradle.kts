@@ -110,12 +110,6 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
-
-    // Forzar inclusión de dependencias en runtime para JVM Desktop
-    "jvmRuntimeOnly"(libs.kotlinx.datetime)
-    "jvmRuntimeOnly"(libs.kotlinx.serialization.json)
-    "jvmRuntimeOnly"(libs.ktor.client.core)
-    "jvmRuntimeOnly"(libs.ktor.client.cio)
 }
 
 compose.desktop {
