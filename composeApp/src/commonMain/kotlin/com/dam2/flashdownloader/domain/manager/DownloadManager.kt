@@ -77,13 +77,20 @@ interface DownloadManager {
 
     /**
      * Elimina una descarga de la lista
+     * @param id ID de la descarga
+     * @param deleteFile Si es true, elimina también el archivo del disco
      */
-    suspend fun removeDownload(id: String): Result<Unit>
+    suspend fun removeDownload(id: String, deleteFile: Boolean = false): Result<Unit>
 
     /**
      * Pausa todas las descargas activas
      */
     suspend fun pauseAll(): Result<Unit>
+
+    /**
+     * Pausa todas las descargas activas (alias de pauseAll)
+     */
+    suspend fun pauseAllDownloads(): Result<Unit>
 
     /**
      * Reanuda todas las descargas pausadas
@@ -110,6 +117,13 @@ interface DownloadManager {
      * Mueve una descarga una posición abajo en la cola
      */
     suspend fun moveDown(id: String): Result<Unit>
+    
+    /**
+     * Reordena una descarga desde una posición a otra (para drag & drop)
+     * @param fromIndex Índice actual del elemento
+     * @param toIndex Índice destino
+     */
+    suspend fun reorderDownload(fromIndex: Int, toIndex: Int): Result<Unit>
 
     /**
      * Cambia el límite de descargas simultáneas

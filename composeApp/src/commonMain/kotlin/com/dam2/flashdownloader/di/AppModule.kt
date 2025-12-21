@@ -5,6 +5,7 @@ import com.dam2.flashdownloader.data.network.DownloadClient
 import com.dam2.flashdownloader.data.repository.DownloadRepositoryImpl
 import com.dam2.flashdownloader.domain.manager.DownloadManager
 import com.dam2.flashdownloader.domain.repository.DownloadRepository
+import com.dam2.flashdownloader.domain.repository.SettingsRepository
 import com.dam2.flashdownloader.presentation.viewmodel.DownloadViewModel
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -41,6 +42,9 @@ fun commonModule() = module {
 
     // Repository (la implementación específica de plataforma se provee en módulos separados)
     single<DownloadRepository> { DownloadRepositoryImpl(get()) }
+    
+    // SettingsRepository (la implementación específica de plataforma se provee en módulos separados)
+    // Se registra en platformModule()
 
     // CoroutineScope para el DownloadManager
     single {
@@ -52,6 +56,7 @@ fun commonModule() = module {
         DownloadManagerImpl(
             downloadClient = get(),
             repository = get(),
+            settingsRepository = get(),
             fileWriterFactory = get(),
             downloadPath = get(named("downloadPath")),
             scope = get()
@@ -62,6 +67,7 @@ fun commonModule() = module {
     single {
         DownloadViewModel(
             downloadManager = get(),
+            settingsRepository = get(),
             clipboardManager = get()
         )
     }

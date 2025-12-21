@@ -51,4 +51,14 @@ class AndroidFileWriter : FileWriter {
             outputStream = null
         }
     }
+
+    override fun delete(path: String): Boolean {
+        return try {
+            val file = File(path)
+            file.delete()
+        } catch (e: Exception) {
+            android.util.Log.e("AndroidFileWriter", "Error eliminando archivo", e)
+            false
+        }
+    }
 }

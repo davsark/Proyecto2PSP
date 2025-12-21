@@ -2,8 +2,10 @@ package com.dam2.flashdownloader.di
 
 import com.dam2.flashdownloader.data.manager.FileWriterFactory
 import com.dam2.flashdownloader.data.network.JvmFileWriterFactory
+import com.dam2.flashdownloader.data.repository.JvmSettingsRepository
 import com.dam2.flashdownloader.data.repository.PersistentStorage
 import com.dam2.flashdownloader.data.storage.JvmPersistentStorage
+import com.dam2.flashdownloader.domain.repository.SettingsRepository
 import com.dam2.flashdownloader.utils.ClipboardManager
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -41,5 +43,10 @@ actual fun platformModule(): Module = module {
     // ClipboardManager
     single {
         ClipboardManager()
+    }
+    
+    // SettingsRepository
+    single<SettingsRepository> {
+        JvmSettingsRepository(get())
     }
 }

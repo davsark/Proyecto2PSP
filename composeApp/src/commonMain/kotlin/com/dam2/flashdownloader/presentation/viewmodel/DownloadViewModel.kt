@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dam2.flashdownloader.domain.manager.DownloadManager
 import com.dam2.flashdownloader.domain.model.*
+import com.dam2.flashdownloader.domain.repository.SettingsRepository
 import com.dam2.flashdownloader.utils.ClipboardManager
 import com.dam2.flashdownloader.utils.extractUrls
 import com.dam2.flashdownloader.utils.isValidUrl
@@ -16,6 +17,7 @@ import kotlinx.coroutines.launch
  */
 class DownloadViewModel(
     private val downloadManager: DownloadManager,
+    private val settingsRepository: SettingsRepository,
     private val clipboardManager: ClipboardManager
 ) : ViewModel() {
 
@@ -82,6 +84,9 @@ class DownloadViewModel(
     // SECCIÓN 2: INICIALIZACIÓN
 
     init {
+        // Cargar tema guardado
+        _isDarkTheme.value = settingsRepository.getIsDarkTheme()
+        
         loadSavedDownloads()
         observeClipboard()
     }
@@ -246,10 +251,11 @@ class DownloadViewModel(
 
     /**
      * Elimina una descarga
+     * @param deleteFile Si es true, elimina también el archivo del disco
      */
-    fun removeDownload(id: String) {
+    fun removeDownload(id: String, deleteFile: Boolean = false) {
         viewModelScope.launch {
-            downloadManager.removeDownload(id)
+            downloadManager.removeDownload(id, deleteFile)
                 .onSuccess {
                     emitEvent(UiEvent.Info("Descarga eliminada"))
                 }
@@ -358,6 +364,20 @@ class DownloadViewModel(
                 }
         }
     }
+    
+    /**
+     * Reordena una descarga mediante drag & drop
+     * @param fromIndex Índice actual
+     * @param toIndex Índice destino
+     */
+    fun moveDownload(fromIndex: Int, toIndex: Int) {
+        viewModelScope.launch {
+            downloadManager.reorderDownload(fromIndex, toIndex)
+                .onFailure { error ->
+                    emitEvent(UiEvent.Error(error.message ?: "Error al reordenar"))
+                }
+        }
+    }
 
     // SECCIÓN 6: CONFIGURACIÓN
 
@@ -407,6 +427,7 @@ class DownloadViewModel(
      */
     fun toggleTheme() {
         _isDarkTheme.update { !it }
+        settingsRepository.setIsDarkTheme(_isDarkTheme.value)
     }
 
     /**

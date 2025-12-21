@@ -197,4 +197,11 @@ interface FileWriter {
      * Cierra el archivo
      */
     fun close()
+
+    /**
+     * Elimina el archivo del disco
+     * @param path Ruta del archivo a eliminar
+     * @return true si la eliminación fue exitosa, false en caso contrario
+     */
+    fun delete(path: String): Boolean
 }

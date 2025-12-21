@@ -9,10 +9,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dam2.flashdownloader.domain.model.Category
-import com.dam2.flashdownloader.presentation.viewmodel.DownloadStatusFilter
 
 /**
- * Barra superior con controles globales y filtros
+ * Barra superior simplificada con búsqueda, filtro de categoría y acciones globales
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,8 +20,6 @@ fun TopBar(
     onSearchQueryChange: (String) -> Unit,
     selectedCategoryFilter: Category?,
     onCategoryFilterChange: (Category?) -> Unit,
-    selectedStatusFilter: DownloadStatusFilter?,
-    onStatusFilterChange: (DownloadStatusFilter?) -> Unit,
     onAddDownload: () -> Unit,
     onPauseAll: () -> Unit,
     onResumeAll: () -> Unit,
@@ -56,20 +53,6 @@ fun TopBar(
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Añadir descarga
-                    Button(
-                        onClick = onAddDownload,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Añadir descarga")
-                    }
-
                     // Pausar todas
                     IconButton(onClick = onPauseAll) {
                         Icon(Icons.Default.PauseCircle, "Pausar todas")
@@ -100,7 +83,7 @@ fun TopBar(
                 }
             }
 
-            // Segunda fila: Búsqueda y filtros
+            // Segunda fila: Búsqueda y filtro de categoría
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -131,12 +114,6 @@ fun TopBar(
                     selectedCategory = selectedCategoryFilter,
                     onCategorySelected = onCategoryFilterChange
                 )
-
-                // Filtro de estado
-                StatusFilterDropdown(
-                    selectedStatus = selectedStatusFilter,
-                    onStatusSelected = onStatusFilterChange
-                )
             }
         }
     }
@@ -160,7 +137,7 @@ private fun CategoryFilterDropdown(
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
-                .menuAnchor()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                 .width(200.dp),
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
         )
@@ -187,53 +164,6 @@ private fun CategoryFilterDropdown(
                     },
                     onClick = {
                         onCategorySelected(category)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun StatusFilterDropdown(
-    selectedStatus: DownloadStatusFilter?,
-    onStatusSelected: (DownloadStatusFilter?) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
-            value = selectedStatus?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Todos los estados",
-            onValueChange = {},
-            readOnly = true,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor()
-                .width(180.dp),
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Todos los estados") },
-                onClick = {
-                    onStatusSelected(null)
-                    expanded = false
-                }
-            )
-            DownloadStatusFilter.entries.forEach { status ->
-                DropdownMenuItem(
-                    text = { Text(status.name.lowercase().replaceFirstChar { it.uppercase() }) },
-                    onClick = {
-                        onStatusSelected(status)
                         expanded = false
                     }
                 )

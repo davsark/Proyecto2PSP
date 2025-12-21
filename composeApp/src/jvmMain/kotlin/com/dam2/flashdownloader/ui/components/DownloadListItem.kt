@@ -8,7 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,7 +24,7 @@ import com.dam2.flashdownloader.utils.formatSpeed
 import com.dam2.flashdownloader.utils.formatTime
 
 /**
- * Item de la lista de descargas con toda la información y controles
+ * Item de la lista de descargas para Desktop con datos reales
  */
 @Composable
 fun DownloadListItem(
@@ -32,13 +32,15 @@ fun DownloadListItem(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onCancel: () -> Unit,
-    onRemove: () -> Unit,
+    onRemove: (deleteFile: Boolean) -> Unit,
     onRetry: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -102,23 +104,40 @@ fun DownloadListItem(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Barra de progreso
+            // Barra de progreso y detalles
             when (val status = download.status) {
                 is DownloadStatus.Downloading, is DownloadStatus.Paused -> {
-                    LinearProgressIndicator(
-                        progress = {
-                            when (status) {
-                                is DownloadStatus.Downloading -> status.progress
-                                is DownloadStatus.Paused -> status.progress
-                                else -> 0f
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = getStatusColor(status),
-                    )
+                    val progress = when (status) {
+                        is DownloadStatus.Downloading -> status.progress
+                        is DownloadStatus.Paused -> status.progress
+                        else -> 0f
+                    }
+
+                    val totalBytes = when (status) {
+                        is DownloadStatus.Downloading -> status.totalBytes
+                        is DownloadStatus.Paused -> status.totalBytes
+                        else -> -1L
+                    }
+
+                    // Barra de progreso (indeterminada si tamaño desconocido)
+                    if (totalBytes <= 0) {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = getStatusColor(status),
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = getStatusColor(status),
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -134,24 +153,36 @@ fun DownloadListItem(
                                 else -> "0%"
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            color = if (status is DownloadStatus.Paused) 
+                                DownloadColors.Paused 
+                            else 
+                                MaterialTheme.colorScheme.onSurface
                         )
 
-                        if (status is DownloadStatus.Downloading) {
+                        if (totalBytes > 0) {
                             Text(
-                                text = "${download.downloadedBytes.formatBytes()} / ${download.totalSize.formatBytes()}",
+                                text = "${download.downloadedBytes.formatBytes()} / ${totalBytes.formatBytes()}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Text(
+                                text = download.downloadedBytes.formatBytes(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
+                    // Velocidad y ETA (solo si está descargando)
                     if (status is DownloadStatus.Downloading && status.speed > 0) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+                            // Velocidad
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.Speed,
@@ -163,24 +194,60 @@ fun DownloadListItem(
                                 Text(
                                     text = status.speed.formatSpeed(),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
 
-                            if (status.estimatedTimeRemaining > 0) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Timer,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.secondary
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = status.estimatedTimeRemaining.formatTime(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
+                            // Tiempo transcurrido y ETA
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Tiempo transcurrido
+                                val elapsedSeconds = status.elapsedTimeSeconds
+                                if (elapsedSeconds > 0) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.AccessTime,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.tertiary
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = elapsedSeconds.formatTime(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.tertiary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                                
+                                // ETA
+                                if (totalBytes > 0) {
+                                    val remainingBytes = totalBytes - status.bytesDownloaded
+                                    val etaSeconds = if (remainingBytes > 0 && status.speed > 0) {
+                                        remainingBytes / status.speed
+                                    } else 0L
+
+                                    if (etaSeconds > 0) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Schedule,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.secondary
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = etaSeconds.formatTime(),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.secondary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -201,7 +268,8 @@ fun DownloadListItem(
                         Text(
                             text = "Completado - ${status.totalBytes.formatBytes()}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = DownloadColors.Completed
+                            color = DownloadColors.Completed,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -217,13 +285,22 @@ fun DownloadListItem(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Error: ${status.error}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = DownloadColors.Failed,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Error: ${status.error}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = DownloadColors.Failed,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (status.bytesDownloaded > 0) {
+                                Text(
+                                    text = "${status.bytesDownloaded.formatBytes()} descargados",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
                 is DownloadStatus.Queued -> {
@@ -244,7 +321,25 @@ fun DownloadListItem(
                         )
                     }
                 }
-                else -> {}
+                is DownloadStatus.Cancelled -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Cancel,
+                            contentDescription = null,
+                            tint = DownloadColors.Cancelled,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Cancelado",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = DownloadColors.Cancelled
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -321,12 +416,31 @@ fun DownloadListItem(
                             )
                         }
                     }
+                    is DownloadStatus.Completed -> {
+                        // Botón para abrir carpeta
+                        IconButton(
+                            onClick = { /* Funcionalidad de abrir carpeta */ },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = "Abrir carpeta",
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
                     else -> {}
                 }
 
-                // Cancelar o eliminar
+                // Cancelar o eliminar con confirmación
                 IconButton(
-                    onClick = if (download.status.isActive) onCancel else onRemove,
+                    onClick = {
+                        if (download.status.isActive) {
+                            onCancel()
+                        } else {
+                            showDeleteDialog = true
+                        }
+                    },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
@@ -337,6 +451,54 @@ fun DownloadListItem(
                 }
             }
         }
+    }
+
+    // Diálogo de confirmación de borrado
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            icon = { Icon(Icons.Default.Delete, null) },
+            title = { Text("Eliminar descarga") },
+            text = { 
+                Column {
+                    Text("¿Qué deseas hacer con esta descarga?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Archivo: ${download.fileName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRemove(true) // Borrar con archivo
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Eliminar archivo del disco")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            onRemove(false) // Borrar solo de la lista
+                            showDeleteDialog = false
+                        }
+                    ) {
+                        Text("Solo quitar de la lista")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        onClick = { showDeleteDialog = false }
+                    ) {
+                        Text("Cancelar")
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -355,13 +517,27 @@ private fun StatusBadge(status: DownloadStatus) {
         shape = RoundedCornerShape(12.dp),
         color = color.copy(alpha = 0.15f)
     ) {
-        Text(
-            text = text,
+        Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            fontWeight = FontWeight.Medium
-        )
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Icono especial para estado pausado
+            if (status is DownloadStatus.Paused) {
+                Icon(
+                    Icons.Default.Pause,
+                    null,
+                    modifier = Modifier.size(12.dp),
+                    tint = color
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                color = color,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 

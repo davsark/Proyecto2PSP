@@ -5,6 +5,7 @@ import com.dam2.flashdownloader.data.network.FileWriter
 import com.dam2.flashdownloader.domain.manager.DownloadManager
 import com.dam2.flashdownloader.domain.model.*
 import com.dam2.flashdownloader.domain.repository.DownloadRepository
+import com.dam2.flashdownloader.domain.repository.SettingsRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -24,10 +25,14 @@ import kotlinx.coroutines.sync.withPermit
  * - Cola de prioridades automática
  * - Cancelación cooperativa
  * - Persistencia automática
+ * - Token Bucket para límite de velocidad real
+ * - Validación de reanudación con HEAD request
+ * - Estadísticas en tiempo real
  */
 class DownloadManagerImpl(
     private val downloadClient: DownloadClient,
     private val repository: DownloadRepository,
+    private val settingsRepository: SettingsRepository,
     private val fileWriterFactory: FileWriterFactory,
     private val downloadPath: String,
     private val scope: CoroutineScope
@@ -79,8 +84,34 @@ class DownloadManagerImpl(
     private val _globalSpeedLimit = MutableStateFlow<Long?>(null)
     override val globalSpeedLimit: StateFlow<Long?> = _globalSpeedLimit.asStateFlow()
 
+    /**
+     * Job para actualizar estadísticas en tiempo real
+     */
+    private var statisticsJob: Job? = null
+
+    /**
+     * Mapa para rastrear bytes descargados por cada descarga (para calcular velocidad global)
+     */
+    private val bytesTracker = mutableMapOf<String, Long>()
+
+    init {
+        // Cargar configuración guardada
+        _maxConcurrentDownloads.value = settingsRepository.getMaxConcurrentDownloads()
+        _globalSpeedLimit.value = settingsRepository.getGlobalSpeedLimit()
+        
+        // Actualizar semaphore con el valor cargado
+        downloadSemaphore = Semaphore(_maxConcurrentDownloads.value)
+        
+        // Iniciar actualizador de estadísticas
+        startStatisticsUpdater()
+    }
+
     // SECCIÓN 2: AÑADIR DESCARGAS
 
+    /**
+     * FIX 1: Eliminada la llamada bloqueante a getFileMetadata
+     * Los metadatos se obtienen ahora en executeDownload
+     */
     override suspend fun addDownload(
         url: String,
         fileName: String?,
@@ -106,7 +137,7 @@ class DownloadManagerImpl(
             // Obtener timestamp actual
             val currentTime = System.currentTimeMillis()
 
-            // Crear item de descarga (metadata se obtendrá durante la descarga)
+            // Crear item de descarga con metadatos vacíos (se actualizarán durante la descarga)
             val downloadItem = DownloadItem(
                 id = id,
                 url = url,
@@ -209,10 +240,23 @@ class DownloadManagerImpl(
         Result.success(Unit)
     }
 
-    override suspend fun removeDownload(id: String): Result<Unit> = downloadsMutex.withLock {
+    /**
+     * FIX 3: Añadido parámetro deleteFile para borrado físico
+     */
+    override suspend fun removeDownload(id: String, deleteFile: Boolean): Result<Unit> = downloadsMutex.withLock {
         // Cancelar si está activo
         activeJobs[id]?.cancel()
         activeJobs.remove(id)
+
+        // Obtener información del archivo antes de eliminar
+        val download = _downloadsList.find { it.id == id }
+        
+        // Eliminar archivo físico si se solicita
+        if (deleteFile && download != null) {
+            val fullPath = "$downloadPath/${download.fileName}"
+            val fileWriter = fileWriterFactory.createFileWriter()
+            fileWriter.delete(fullPath)
+        }
 
         // Eliminar de la lista
         _downloadsList.removeAll { it.id == id }
@@ -221,10 +265,24 @@ class DownloadManagerImpl(
         // Eliminar del repositorio
         repository.deleteDownload(id)
 
+        // Limpiar tracker de bytes
+        bytesTracker.remove(id)
+
         Result.success(Unit)
     }
 
     // SECCIÓN 4: CONTROL GLOBAL
+
+    /**
+     * FIX 6: Implementación de pauseAllDownloads
+     */
+    override suspend fun pauseAllDownloads(): Result<Unit> = downloadsMutex.withLock {
+        val activeDownloads = _downloadsList.filter { it.status is DownloadStatus.Downloading }
+        activeDownloads.forEach { download ->
+            pauseDownload(download.id)
+        }
+        Result.success(Unit)
+    }
 
     override suspend fun pauseAll(): Result<Unit> = downloadsMutex.withLock {
         _downloadsList.filter { it.status is DownloadStatus.Downloading }.forEach {
@@ -300,29 +358,35 @@ class DownloadManagerImpl(
 
         Result.success(Unit)
     }
-
-    // SECCIÓN 6: CONFIGURACIÓN
-
-    override suspend fun setMaxConcurrentDownloads(limit: Int): Result<Unit> {
-        if (limit !in 1..10) {
-            return Result.failure(IllegalArgumentException("El límite debe estar entre 1 y 10"))
+    
+    override suspend fun reorderDownload(fromIndex: Int, toIndex: Int): Result<Unit> = downloadsMutex.withLock {
+        // Validar índices
+        if (fromIndex < 0 || fromIndex >= _downloadsList.size) {
+            return Result.failure(IllegalArgumentException("Índice de origen inválido: $fromIndex"))
         }
-
-        _maxConcurrentDownloads.value = limit
-        downloadSemaphore = Semaphore(limit)
-
-        // Re-procesar cola con el nuevo límite
-        scope.launch(Dispatchers.IO) {
-            processQueue()
+        if (toIndex < 0 || toIndex >= _downloadsList.size) {
+            return Result.failure(IllegalArgumentException("Índice de destino inválido: $toIndex"))
         }
-
-        return Result.success(Unit)
+        if (fromIndex == toIndex) {
+            return Result.success(Unit) // No hay cambio
+        }
+        
+        // Mover el elemento
+        val item = _downloadsList.removeAt(fromIndex)
+        _downloadsList.add(toIndex, item)
+        
+        // Actualizar UI
+        updateDownloadsFlow()
+        
+        // Persistir cambios
+        _downloadsList.forEach { download ->
+            repository.updateDownload(download)
+        }
+        
+        Result.success(Unit)
     }
 
-    override suspend fun setGlobalSpeedLimit(bytesPerSecond: Long?): Result<Unit> {
-        _globalSpeedLimit.value = bytesPerSecond
-        return Result.success(Unit)
-    }
+    // SECCIÓN 6: CONFIGURACIÓN (methods moved to SECCIÓN 11)
 
     override suspend fun setDownloadSpeedLimit(id: String, bytesPerSecond: Long?): Result<Unit> = downloadsMutex.withLock {
         val index = _downloadsList.indexOfFirst { it.id == id }
@@ -374,83 +438,229 @@ class DownloadManagerImpl(
         }
     }
 
-    /**
-     * Ejecuta la descarga real de un archivo
-     * Usa async para ejecución paralela y Flow para progreso
-     */
+    // SECCIÓN 7: EJECUCIÓN DE DESCARGAS
+
     private suspend fun executeDownload(id: String) {
         val download = downloadsMutex.withLock {
             _downloadsList.find { it.id == id }
         } ?: return
 
-        try {
-            // Verificar si hay progreso guardado (para reanudar)
-            val startByte = repository.getPartialData(id).getOrNull() ?: 0L
+        // Auto-retry configuration
+        val maxRetries = 3
+        var retryCount = 0
+        var lastException: Exception? = null
+        
+        // Record start time for elapsed time tracking
+        val downloadStartTime = System.currentTimeMillis()
 
-            // Determinar límite de velocidad (individual o global)
-            val speedLimit = download.speedLimit ?: _globalSpeedLimit.value
+        while (retryCount <= maxRetries) {
+            try {
+                // FIX 1: Obtener metadatos del archivo al inicio (no en addDownload)
+                val metadataResult = downloadClient.getFileMetadata(download.url)
+                val metadata = metadataResult.getOrNull() ?: DownloadMetadata()
 
-            // Construir ruta completa del archivo
-            val fullPath = "$downloadPath/${download.fileName}"
+                // ADVANCED: Pre-check disk space
+                if (metadata.totalBytes > 0) {
+                    val hasSpace = withContext(Dispatchers.IO) {
+                        com.dam2.flashdownloader.utils.HashUtils.hasEnoughDiskSpace(
+                            downloadPath,
+                            metadata.totalBytes
+                        )
+                    }
+                    
+                    if (!hasSpace) {
+                        updateDownloadStatus(
+                            id,
+                            DownloadStatus.Failed(
+                                error = "Espacio insuficiente en disco. Se requieren ${metadata.totalBytes / (1024 * 1024)} MB",
+                                bytesDownloaded = 0L
+                            )
+                        )
+                        return
+                    }
+                }
 
-            // Crear FileWriter
-            val fileWriter = fileWriterFactory.createFileWriter()
+                // Actualizar el item con los metadatos obtenidos
+                downloadsMutex.withLock {
+                    val index = _downloadsList.indexOfFirst { it.id == id }
+                    if (index != -1) {
+                        val updatedFileName = metadata.serverFileName ?: download.fileName
+                        _downloadsList[index] = _downloadsList[index].copy(
+                            fileName = updatedFileName,
+                            metadata = metadata
+                        )
+                        updateDownloadsFlow()
+                    }
+                }
 
-            // Iniciar descarga y recolectar progreso
-            downloadClient.downloadFile(
-                url = download.url,
-                outputPath = fullPath,
-                startByte = startByte,
-                speedLimitBytesPerSecond = speedLimit,
-                fileWriter = fileWriter
-            ).collect { progress ->
-                // Verificar cancelación
-                currentCoroutineContext().ensureActive()
+                // Verificar si hay progreso guardado (para reanudar)
+                var startByte = repository.getPartialData(id).getOrNull() ?: 0L
 
-                // Actualizar estado con progreso
+                // FIX 4: Validar soporte de reanudación antes de reanudar
+                if (startByte > 0) {
+                    val supportsResume = metadata.supportsRangeRequests
+                    if (!supportsResume) {
+                        // El servidor no soporta reanudación, reiniciar desde 0
+                        startByte = 0L
+                        // Eliminar archivo parcial
+                        val fullPath = "$downloadPath/${download.fileName}"
+                        val fileWriter = fileWriterFactory.createFileWriter()
+                        fileWriter.delete(fullPath)
+                    }
+                }
+
+                // Determinar límite de velocidad (individual o global)
+                val speedLimit = download.speedLimit ?: _globalSpeedLimit.value
+
+                // Construir ruta completa del archivo
+                val fullPath = "$downloadPath/${download.fileName}"
+
+                // Crear FileWriter
+                val fileWriter = fileWriterFactory.createFileWriter()
+
+                // FIX 2: Variables para Token Bucket
+                var tokenBucket = 0.0 // Tokens disponibles
+                var lastTokenRefill = System.currentTimeMillis()
+
+                // Inicializar tracker de bytes
+                bytesTracker[id] = startByte
+
+                // Iniciar descarga y recolectar progreso
+                downloadClient.downloadFile(
+                    url = download.url,
+                    outputPath = fullPath,
+                    startByte = startByte,
+                    speedLimitBytesPerSecond = null, // Manejamos el límite aquí con Token Bucket
+                    fileWriter = fileWriter
+                ).collect { progress ->
+                    // Verificar cancelación
+                    currentCoroutineContext().ensureActive()
+
+                    // FIX 2: Aplicar Token Bucket para límite de velocidad
+                    if (speedLimit != null && speedLimit > 0) {
+                        val currentTime = System.currentTimeMillis()
+                        val timeDelta = (currentTime - lastTokenRefill) / 1000.0 // segundos
+
+                        // Rellenar tokens basado en el tiempo transcurrido
+                        tokenBucket += timeDelta * speedLimit
+                        // Limitar el bucket al máximo de 1 segundo de datos
+                        if (tokenBucket > speedLimit) {
+                            tokenBucket = speedLimit.toDouble()
+                        }
+                        lastTokenRefill = currentTime
+
+                        // Calcular bytes desde última actualización
+                        val previousBytes = bytesTracker[id] ?: 0L
+                        val bytesInThisChunk = progress.bytesDownloaded - previousBytes
+
+                        // Consumir tokens
+                        tokenBucket -= bytesInThisChunk
+
+                        // Si no hay suficientes tokens, esperar
+                        if (tokenBucket < 0) {
+                            val deficit = -tokenBucket
+                            val delayMs = ((deficit / speedLimit) * 1000).toLong()
+                            delay(delayMs)
+                            tokenBucket = 0.0
+                        }
+                    }
+
+                    // Actualizar tracker
+                    bytesTracker[id] = progress.bytesDownloaded
+
+                    // Actualizar estado con progreso (preservando startTime)
+                    updateDownloadStatus(
+                        id,
+                        DownloadStatus.Downloading(
+                            bytesDownloaded = progress.bytesDownloaded,
+                            totalBytes = progress.totalBytes,
+                            speed = progress.speed,
+                            startTime = downloadStartTime
+                        )
+                    )
+
+                    // Guardar progreso para poder reanudar
+                    repository.savePartialData(id, progress.bytesDownloaded)
+
+                    // Actualizar estadísticas globales
+                    updateStatistics()
+                }
+
+                // ADVANCED: Calculate SHA-256 hash after successful download
+                val calculatedHash = withContext(Dispatchers.Default) {
+                    com.dam2.flashdownloader.utils.HashUtils.calculateSHA256(fullPath)
+                }
+
+                // Descarga completada con hash
                 updateDownloadStatus(
                     id,
-                    DownloadStatus.Downloading(
-                        bytesDownloaded = progress.bytesDownloaded,
-                        totalBytes = progress.totalBytes,
-                        speed = progress.speed
+                    DownloadStatus.Completed(
+                        filePath = fullPath,
+                        totalBytes = metadata.totalBytes,
+                        calculatedHash = calculatedHash
                     )
                 )
+                
+                // Success - exit retry loop
+                return
 
-                // Guardar progreso para poder reanudar
-                repository.savePartialData(id, progress.bytesDownloaded)
-
-                // Actualizar estadísticas globales
-                updateStatistics()
-            }
-
-            // Descarga completada
-            updateDownloadStatus(
-                id,
-                DownloadStatus.Completed(
-                    filePath = fullPath,
-                    totalBytes = download.totalSize
+            } catch (e: CancellationException) {
+                // Descarga cancelada por el usuario (comportamiento esperado)
+                throw e
+            } catch (e: java.io.IOException) {
+                // Network error - retry
+                lastException = e
+                retryCount++
+                
+                if (retryCount <= maxRetries) {
+                    // Wait before retry (exponential backoff: 2s, 4s, 8s)
+                    val delayMs = 2000L * (1 shl (retryCount - 1))
+                    delay(delayMs)
+                    
+                    // Update status to show retry attempt
+                    val currentBytes = downloadsMutex.withLock {
+                        _downloadsList.find { it.id == id }?.downloadedBytes ?: 0L
+                    }
+                    updateDownloadStatus(
+                        id,
+                        DownloadStatus.Failed(
+                            error = "Error de red. Reintentando (${retryCount}/$maxRetries)...",
+                            bytesDownloaded = currentBytes
+                        )
+                    )
+                } else {
+                    // Max retries exceeded
+                    val currentBytes = downloadsMutex.withLock {
+                        _downloadsList.find { it.id == id }?.downloadedBytes ?: 0L
+                    }
+                    updateDownloadStatus(
+                        id,
+                        DownloadStatus.Failed(
+                            error = "Error de red tras $maxRetries intentos: ${e.message}",
+                            bytesDownloaded = currentBytes
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                // Other errors - don't retry
+                val currentBytes = downloadsMutex.withLock {
+                    _downloadsList.find { it.id == id }?.downloadedBytes ?: 0L
+                }
+                updateDownloadStatus(
+                    id,
+                    DownloadStatus.Failed(
+                        error = e.message ?: "Error desconocido",
+                        bytesDownloaded = currentBytes
+                    )
                 )
-            )
-
-        } catch (e: CancellationException) {
-            // Descarga cancelada por el usuario (comportamiento esperado)
-            throw e
-        } catch (e: Exception) {
-            // Error en la descarga
-            val currentBytes = downloadsMutex.withLock {
-                _downloadsList.find { it.id == id }?.downloadedBytes ?: 0L
+                return
+            } finally {
+                if (retryCount > maxRetries || lastException !is java.io.IOException) {
+                    activeJobs.remove(id)
+                    bytesTracker.remove(id)
+                    updateStatistics()
+                }
             }
-            updateDownloadStatus(
-                id,
-                DownloadStatus.Failed(
-                    error = e.message ?: "Error desconocido",
-                    bytesDownloaded = currentBytes
-                )
-            )
-        } finally {
-            activeJobs.remove(id)
-            updateStatistics()
         }
     }
 
@@ -503,6 +713,46 @@ class DownloadManagerImpl(
     }
 
     /**
+     * FIX 5: Implementación real del actualizador de estadísticas
+     * Calcula la velocidad global sumando los bytes descargados en el último segundo
+     */
+    private fun startStatisticsUpdater() {
+        statisticsJob = scope.launch(Dispatchers.IO) {
+            val previousBytes = mutableMapOf<String, Long>()
+            
+            while (isActive) {
+                delay(1000) // Actualizar cada segundo
+
+                downloadsMutex.withLock {
+                    var globalSpeed = 0L
+
+                    // Calcular velocidad para cada descarga activa
+                    _downloadsList.filter { it.status is DownloadStatus.Downloading }.forEach { download ->
+                        val currentBytes = download.downloadedBytes
+                        val prevBytes = previousBytes[download.id] ?: currentBytes
+                        val bytesInLastSecond = currentBytes - prevBytes
+                        globalSpeed += bytesInLastSecond
+                        previousBytes[download.id] = currentBytes
+                    }
+
+                    // Limpiar entradas de descargas que ya no están activas
+                    val activeIds = _downloadsList
+                        .filter { it.status is DownloadStatus.Downloading }
+                        .map { it.id }
+                        .toSet()
+                    previousBytes.keys.retainAll(activeIds)
+
+                    // Actualizar estadísticas con la velocidad calculada
+                    val stats = _statistics.value.copy(
+                        currentGlobalSpeed = globalSpeed
+                    )
+                    _statistics.value = stats
+                }
+            }
+        }
+    }
+
+    /**
      * Calcula la velocidad media de descargas activas
      */
     private fun calculateAverageSpeed(): Long {
@@ -534,9 +784,23 @@ class DownloadManagerImpl(
     // SECCIÓN 9: VERIFICACIÓN DE INTEGRIDAD
 
     override suspend fun verifyIntegrity(id: String, expectedHash: String): Result<Boolean> {
-        // TODO: Implementar verificación de hash (MD5, SHA-256, etc.)
-        // Esta funcionalidad requiere APIs específicas de plataforma
-        return Result.success(true)
+        // La verificación de integridad se realiza automáticamente al completar la descarga
+        // El hash SHA-256 se calcula y almacena en DownloadStatus.Completed.calculatedHash
+        val download = downloadsMutex.withLock {
+            _downloadsList.find { it.id == id }
+        } ?: return Result.failure(Exception("Descarga no encontrada"))
+        
+        return when (val status = download.status) {
+            is DownloadStatus.Completed -> {
+                val calculatedHash = status.calculatedHash
+                if (calculatedHash == null) {
+                    Result.failure(Exception("Hash no disponible"))
+                } else {
+                    Result.success(calculatedHash.equals(expectedHash, ignoreCase = true))
+                }
+            }
+            else -> Result.failure(Exception("La descarga no está completada"))
+        }
     }
 
     // SECCIÓN 10: PERSISTENCIA Y CICLO DE VIDA
@@ -570,8 +834,46 @@ class DownloadManagerImpl(
         }
     }
 
-    override suspend fun shutdown(): Result<Unit> {
+    // SECCIÓN 11: CONFIGURACIÓN
+
+    override suspend fun setMaxConcurrentDownloads(limit: Int): Result<Unit> {
         return try {
+            if (limit < 1) {
+                return Result.failure(IllegalArgumentException("El límite debe ser al menos 1"))
+            }
+            
+            _maxConcurrentDownloads.value = limit
+            downloadSemaphore = Semaphore(limit)
+            
+            // Guardar en repositorio
+            settingsRepository.setMaxConcurrentDownloads(limit)
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun setGlobalSpeedLimit(bytesPerSecond: Long?): Result<Unit> {
+        return try {
+            _globalSpeedLimit.value = bytesPerSecond
+            
+            // Guardar en repositorio
+            settingsRepository.setGlobalSpeedLimit(bytesPerSecond)
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun shutdown(): Result<Unit> {
+
+        return try {
+            // Detener actualizador de estadísticas
+            statisticsJob?.cancel()
+            statisticsJob = null
+
             // Pausar todas las descargas activas
             pauseAll()
 

@@ -51,4 +51,14 @@ class JvmFileWriter : FileWriter {
             outputStream = null
         }
     }
+
+    override fun delete(path: String): Boolean {
+        return try {
+            val file = File(path)
+            file.delete()
+        } catch (e: Exception) {
+            println("Error eliminando archivo: ${e.message}")
+            false
+        }
+    }
 }

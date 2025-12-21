@@ -4,8 +4,10 @@ import android.content.Context
 import android.os.Environment
 import com.dam2.flashdownloader.data.manager.FileWriterFactory
 import com.dam2.flashdownloader.data.network.AndroidFileWriterFactory
+import com.dam2.flashdownloader.data.repository.AndroidSettingsRepository
 import com.dam2.flashdownloader.data.repository.PersistentStorage
 import com.dam2.flashdownloader.data.storage.AndroidPersistentStorage
+import com.dam2.flashdownloader.domain.repository.SettingsRepository
 import com.dam2.flashdownloader.utils.ClipboardManager
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -53,5 +55,10 @@ actual fun platformModule(): Module = module {
     // ClipboardManager
     single {
         ClipboardManager(get())
+    }
+    
+    // SettingsRepository
+    single<SettingsRepository> {
+        AndroidSettingsRepository(get())
     }
 }

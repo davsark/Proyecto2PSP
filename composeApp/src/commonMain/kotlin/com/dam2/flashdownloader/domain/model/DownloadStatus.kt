@@ -14,11 +14,13 @@ sealed class DownloadStatus {
      * @param bytesDownloaded Bytes descargados hasta el momento
      * @param totalBytes Total de bytes a descargar (puede ser -1 si es desconocido)
      * @param speed Velocidad actual en bytes/segundo
+     * @param startTime Timestamp cuando empezó la descarga (para calcular tiempo transcurrido)
      */
     data class Downloading(
         val bytesDownloaded: Long,
         val totalBytes: Long,
-        val speed: Long = 0L
+        val speed: Long = 0L,
+        val startTime: Long = System.currentTimeMillis()
     ) : DownloadStatus() {
         val progress: Float
             get() = if (totalBytes > 0) (bytesDownloaded.toFloat() / totalBytes.toFloat()) else 0f
@@ -35,6 +37,12 @@ sealed class DownloadStatus {
                 val remainingBytes = totalBytes - bytesDownloaded
                 return remainingBytes / speed
             }
+            
+        /**
+         * Calcula el tiempo transcurrido en segundos
+         */
+        val elapsedTimeSeconds: Long
+            get() = (System.currentTimeMillis() - startTime) / 1000
     }
 
     /**
@@ -57,10 +65,12 @@ sealed class DownloadStatus {
      * La descarga ha sido completada exitosamente
      * @param filePath Ruta donde se guardó el archivo
      * @param totalBytes Tamaño total del archivo
+     * @param calculatedHash Hash SHA-256 del archivo descargado
      */
     data class Completed(
         val filePath: String,
-        val totalBytes: Long
+        val totalBytes: Long,
+        val calculatedHash: String? = null
     ) : DownloadStatus()
 
     /**

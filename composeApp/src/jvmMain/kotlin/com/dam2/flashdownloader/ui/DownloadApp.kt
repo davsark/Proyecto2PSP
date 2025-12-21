@@ -3,11 +3,14 @@ package com.dam2.flashdownloader.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.dam2.flashdownloader.domain.model.DownloadStatus
 import com.dam2.flashdownloader.presentation.viewmodel.DownloadViewModel
 import com.dam2.flashdownloader.presentation.viewmodel.UiEvent
 import com.dam2.flashdownloader.ui.components.DownloadListItem
@@ -21,7 +24,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Aplicación principal de Desktop
+ * Aplicación principal de Desktop con NavigationRail
  */
 @Composable
 fun DownloadApp(
@@ -36,6 +39,9 @@ fun DownloadApp(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Estado de navegación (0 = Todos, 1 = Activos, 2 = Completados)
+    var selectedNavIndex by remember { mutableStateOf(0) }
 
     // Observar eventos de UI
     LaunchedEffect(Unit) {
@@ -63,6 +69,29 @@ fun DownloadApp(
         }
     }
 
+    // Filtrar descargas según navegación
+    val filteredDownloads = remember(downloads, selectedNavIndex) {
+        when (selectedNavIndex) {
+            0 -> downloads // Todos
+            1 -> downloads.filter { // Activos (Descargando)
+                it.status is DownloadStatus.Downloading
+            }
+            2 -> downloads.filter { // En Cola
+                it.status is DownloadStatus.Queued
+            }
+            3 -> downloads.filter { // Pausadas
+                it.status is DownloadStatus.Paused
+            }
+            4 -> downloads.filter { // Completados
+                it.status is DownloadStatus.Completed
+            }
+            5 -> downloads.filter { // Errores
+                it.status is DownloadStatus.Failed
+            }
+            else -> downloads
+        }
+    }
+
     FlashDownloaderTheme(darkTheme = isDarkTheme) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -72,6 +101,129 @@ fun DownloadApp(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
+                // NavigationRail (barra lateral izquierda)
+                NavigationRail(
+                    modifier = Modifier.fillMaxHeight(),
+                    header = {
+                        FloatingActionButton(
+                            onClick = { viewModel.showAddDownloadDialog() },
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        ) {
+                            Icon(Icons.Default.Add, "Añadir descarga")
+                        }
+                    }
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Todos
+                    NavigationRailItem(
+                        selected = selectedNavIndex == 0,
+                        onClick = { selectedNavIndex = 0 },
+                        icon = { Icon(Icons.Default.List, null) },
+                        label = { Text("Todos") },
+                        alwaysShowLabel = true
+                    )
+                    
+                    // Activos (Descargando)
+                    NavigationRailItem(
+                        selected = selectedNavIndex == 1,
+                        onClick = { selectedNavIndex = 1 },
+                        icon = { 
+                            BadgedBox(
+                                badge = {
+                                    val activeCount = downloads.count { it.status is DownloadStatus.Downloading }
+                                    if (activeCount > 0) {
+                                        Badge { Text(activeCount.toString()) }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Download, null)
+                            }
+                        },
+                        label = { Text("Activos") },
+                        alwaysShowLabel = true
+                    )
+                    
+                    // En Cola
+                    NavigationRailItem(
+                        selected = selectedNavIndex == 2,
+                        onClick = { selectedNavIndex = 2 },
+                        icon = { 
+                            BadgedBox(
+                                badge = {
+                                    val queuedCount = downloads.count { it.status is DownloadStatus.Queued }
+                                    if (queuedCount > 0) {
+                                        Badge { Text(queuedCount.toString()) }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.HourglassEmpty, null)
+                            }
+                        },
+                        label = { Text("En Cola") },
+                        alwaysShowLabel = true
+                    )
+                    
+                    // Pausadas
+                    NavigationRailItem(
+                        selected = selectedNavIndex == 3,
+                        onClick = { selectedNavIndex = 3 },
+                        icon = { 
+                            BadgedBox(
+                                badge = {
+                                    val pausedCount = downloads.count { it.status is DownloadStatus.Paused }
+                                    if (pausedCount > 0) {
+                                        Badge { Text(pausedCount.toString()) }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Pause, null)
+                            }
+                        },
+                        label = { Text("Pausadas") },
+                        alwaysShowLabel = true
+                    )
+                    
+                    // Completados
+                    NavigationRailItem(
+                        selected = selectedNavIndex == 4,
+                        onClick = { selectedNavIndex = 4 },
+                        icon = { 
+                            BadgedBox(
+                                badge = {
+                                    if (statistics.completedDownloads > 0) {
+                                        Badge { Text(statistics.completedDownloads.toString()) }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.CheckCircle, null)
+                            }
+                        },
+                        label = { Text("Completados") },
+                        alwaysShowLabel = true
+                    )
+                    
+                    // Errores
+                    NavigationRailItem(
+                        selected = selectedNavIndex == 5,
+                        onClick = { selectedNavIndex = 5 },
+                        icon = { 
+                            BadgedBox(
+                                badge = {
+                                    val failedCount = downloads.count { it.status is DownloadStatus.Failed }
+                                    if (failedCount > 0) {
+                                        Badge { Text(failedCount.toString()) }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Error, null)
+                            }
+                        },
+                        label = { Text("Errores") },
+                        alwaysShowLabel = true
+                    )
+                }
+
                 // Contenido principal
                 Column(
                     modifier = Modifier
@@ -84,8 +236,6 @@ fun DownloadApp(
                         onSearchQueryChange = viewModel::updateSearchQuery,
                         selectedCategoryFilter = uiState.selectedCategoryFilter,
                         onCategoryFilterChange = viewModel::filterByCategory,
-                        selectedStatusFilter = uiState.selectedStatusFilter,
-                        onStatusFilterChange = viewModel::filterByStatus,
                         onAddDownload = viewModel::showAddDownloadDialog,
                         onPauseAll = { scope.launch { viewModel.pauseAll() } },
                         onResumeAll = { scope.launch { viewModel.resumeAll() } },
@@ -96,11 +246,11 @@ fun DownloadApp(
                     )
 
                     // Lista de descargas
-                    if (downloads.isEmpty()) {
-                        // Estado vacío
+                    if (filteredDownloads.isEmpty()) {
                         EmptyState(
                             modifier = Modifier.fillMaxSize(),
-                            onAddDownload = viewModel::showAddDownloadDialog
+                            onAddDownload = viewModel::showAddDownloadDialog,
+                            navIndex = selectedNavIndex
                         )
                     } else {
                         LazyColumn(
@@ -108,7 +258,7 @@ fun DownloadApp(
                             contentPadding = PaddingValues(vertical = 8.dp)
                         ) {
                             items(
-                                items = downloads,
+                                items = filteredDownloads,
                                 key = { it.id }
                             ) { download ->
                                 DownloadListItem(
@@ -116,7 +266,9 @@ fun DownloadApp(
                                     onPause = { viewModel.pauseDownload(download.id) },
                                     onResume = { viewModel.resumeDownload(download.id) },
                                     onCancel = { viewModel.cancelDownload(download.id) },
-                                    onRemove = { viewModel.removeDownload(download.id) },
+                                    onRemove = { deleteFile -> 
+                                        viewModel.removeDownload(download.id, deleteFile) 
+                                    },
                                     onRetry = { viewModel.retryDownload(download.id) },
                                     onMoveUp = { viewModel.moveDownloadUp(download.id) },
                                     onMoveDown = { viewModel.moveDownloadDown(download.id) },
@@ -127,7 +279,7 @@ fun DownloadApp(
                     }
                 }
 
-                // Panel de estadísticas
+                // Panel de estadísticas (lado derecho)
                 StatisticsPanel(statistics = statistics)
             }
 
@@ -182,32 +334,46 @@ fun DownloadApp(
 @Composable
 private fun EmptyState(
     onAddDownload: () -> Unit,
+    navIndex: Int,
     modifier: Modifier = Modifier
 ) {
+    val (emoji, title, subtitle) = when (navIndex) {
+        1 -> Triple("⬇️", "No hay descargas activas", "Las descargas en progreso aparecerán aquí")
+        2 -> Triple("⏳", "No hay descargas en cola", "Las descargas en espera aparecerán aquí")
+        3 -> Triple("⏸️", "No hay descargas pausadas", "Las descargas pausadas aparecerán aquí")
+        4 -> Triple("✅", "No hay descargas completadas", "Las descargas completadas aparecerán aquí")
+        5 -> Triple("❌", "No hay descargas con errores", "Las descargas fallidas aparecerán aquí")
+        else -> Triple("📥", "No hay descargas", "Añade tu primera descarga para comenzar")
+    }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "📥",
+            text = emoji,
             style = MaterialTheme.typography.displayLarge
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "No hay descargas",
+            text = title,
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Añade tu primera descarga para comenzar",
+            text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onAddDownload) {
-            Text("Añadir descarga")
+        if (navIndex == 0) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(onClick = onAddDownload) {
+                Icon(Icons.Default.Add, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Añadir descarga")
+            }
         }
     }
 }
