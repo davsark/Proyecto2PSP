@@ -66,33 +66,30 @@ class DownloadManagerImpl(
     private val _downloads = MutableStateFlow<List<DownloadItem>>(emptyList())
     override val downloads: StateFlow<List<DownloadItem>> = _downloads.asStateFlow()
 
-    /**
-     * StateFlow de estadísticas
-     */
+    // Estadísticas
     private val _statistics = MutableStateFlow(DownloadStatistics())
     override val statistics: StateFlow<DownloadStatistics> = _statistics.asStateFlow()
 
-    /**
-     * Límite de descargas simultáneas
-     */
+    // Job para actualizar estadísticas
+    private var statisticsJob: Job? = null
+
+    // Configuración
     private val _maxConcurrentDownloads = MutableStateFlow(3)
     override val maxConcurrentDownloads: StateFlow<Int> = _maxConcurrentDownloads.asStateFlow()
 
-    /**
-     * Límite de velocidad global
-     */
     private val _globalSpeedLimit = MutableStateFlow<Long?>(null)
     override val globalSpeedLimit: StateFlow<Long?> = _globalSpeedLimit.asStateFlow()
 
-    /**
-     * Job para actualizar estadísticas en tiempo real
-     */
-    private var statisticsJob: Job? = null
-
-    /**
-     * Mapa para rastrear bytes descargados por cada descarga (para calcular velocidad global)
-     */
+    // Tracker de bytes para cálculo de velocidad
     private val bytesTracker = mutableMapOf<String, Long>()
+    private val speedTracker = mutableMapOf<String, Long>()
+    private var lastSpeedUpdate = System.currentTimeMillis()
+
+    // Optimización de persistencia - evitar DB spam
+    private val lastPersistTime = mutableMapOf<String, Long>()
+    private companion object {
+        const val PERSIST_INTERVAL_MS = 5000L // 5 segundos
+    }
 
     init {
         // Cargar configuración guardada
@@ -235,7 +232,7 @@ class DownloadManagerImpl(
         activeJobs.remove(id)
 
         // Actualizar estado
-        updateDownloadStatus(id, DownloadStatus.Cancelled)
+        updateDownloadStatus(id, DownloadStatus.Cancelled, forcePersist = true)
 
         Result.success(Unit)
     }
@@ -598,7 +595,8 @@ class DownloadManagerImpl(
                         filePath = fullPath,
                         totalBytes = metadata.totalBytes,
                         calculatedHash = calculatedHash
-                    )
+                    ),
+                    forcePersist = true  // ✅ Persistir inmediatamente
                 )
                 
                 // Success - exit retry loop
@@ -626,7 +624,8 @@ class DownloadManagerImpl(
                         DownloadStatus.Failed(
                             error = "Error de red. Reintentando (${retryCount}/$maxRetries)...",
                             bytesDownloaded = currentBytes
-                        )
+                        ),
+                        forcePersist = true  // ✅ Persistir estado de reintento
                     )
                 } else {
                     // Max retries exceeded
@@ -638,7 +637,8 @@ class DownloadManagerImpl(
                         DownloadStatus.Failed(
                             error = "Error de red tras $maxRetries intentos: ${e.message}",
                             bytesDownloaded = currentBytes
-                        )
+                        ),
+                        forcePersist = true  // ✅ Persistir fallo final
                     )
                 }
             } catch (e: Exception) {
@@ -651,7 +651,8 @@ class DownloadManagerImpl(
                     DownloadStatus.Failed(
                         error = e.message ?: "Error desconocido",
                         bytesDownloaded = currentBytes
-                    )
+                    ),
+                    forcePersist = true  // ✅ Persistir error
                 )
                 return
             } finally {
@@ -665,20 +666,6 @@ class DownloadManagerImpl(
     }
 
     // SECCIÓN 8: FUNCIONES AUXILIARES
-
-    /**
-     * Actualiza el estado de una descarga específica (Thread-safe)
-     */
-    private suspend fun updateDownloadStatus(id: String, newStatus: DownloadStatus) {
-        downloadsMutex.withLock {
-            val index = _downloadsList.indexOfFirst { it.id == id }
-            if (index != -1) {
-                _downloadsList[index] = _downloadsList[index].copy(status = newStatus)
-                updateDownloadsFlow()
-                repository.updateDownload(_downloadsList[index])
-            }
-        }
-    }
 
     /**
      * Actualiza el StateFlow de descargas
@@ -781,7 +768,68 @@ class DownloadManagerImpl(
         return url.substringAfterLast('/').substringBefore('?').ifEmpty { "download" }
     }
 
-    // SECCIÓN 9: VERIFICACIÓN DE INTEGRIDAD
+    // SECCIÓN 9: ACTUALIZACIÓN DE ESTADO Y PERSISTENCIA
+
+    /**
+     * Actualiza el estado de una descarga con persistencia optimizada
+     * 
+     * @param id ID de la descarga
+     * @param status Nuevo estado
+     * @param forcePersist Si es true, persiste inmediatamente sin importar el tiempo
+     */
+    private suspend fun updateDownloadStatus(
+        id: String,
+        status: DownloadStatus,
+        forcePersist: Boolean = false
+    ) {
+        downloadsMutex.withLock {
+            val index = _downloadsList.indexOfFirst { it.id == id }
+            if (index != -1) {
+                // ✅ SIEMPRE actualiza en memoria (UI fluida)
+                _downloadsList[index] = _downloadsList[index].copy(status = status)
+                updateDownloadsFlow()
+                
+                // ✅ Persistencia inteligente
+                val shouldPersist = forcePersist || 
+                    status.isCriticalState() ||
+                    shouldPersistByTime(id)
+                
+                if (shouldPersist) {
+                    // Persistir en BD (en IO dispatcher)
+                    withContext(Dispatchers.IO) {
+                        try {
+                            repository.updateDownload(_downloadsList[index])
+                            lastPersistTime[id] = System.currentTimeMillis()
+                        } catch (e: Exception) {
+                            // Log error pero no bloquear UI
+                            println("Error persisting download $id: ${e.message}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Verifica si debe persistir basado en el tiempo transcurrido
+     */
+    private fun shouldPersistByTime(id: String): Boolean {
+        val lastTime = lastPersistTime[id] ?: 0L
+        return (System.currentTimeMillis() - lastTime) >= PERSIST_INTERVAL_MS
+    }
+    
+    /**
+     * Determina si un estado es crítico y debe persistirse inmediatamente
+     */
+    private fun DownloadStatus.isCriticalState(): Boolean = when (this) {
+        is DownloadStatus.Completed,
+        is DownloadStatus.Failed,
+        is DownloadStatus.Cancelled,
+        is DownloadStatus.Paused -> true
+        else -> false
+    }
+
+    // SECCIÓN 11: VERIFICACIÓN DE INTEGRIDAD
 
     override suspend fun verifyIntegrity(id: String, expectedHash: String): Result<Boolean> {
         // La verificación de integridad se realiza automáticamente al completar la descarga
