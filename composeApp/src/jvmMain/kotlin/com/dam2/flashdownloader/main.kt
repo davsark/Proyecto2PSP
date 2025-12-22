@@ -1,5 +1,6 @@
 package com.dam2.flashdownloader
 
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -23,7 +24,8 @@ fun main() = application {
         Window(
             onCloseRequest = ::exitApplication,
             title = "Flash Downloader - Gestor de descargas multiplataforma",
-            state = windowState
+            state = windowState,
+            icon = painterResource("drawable/logo.png")
         ) {
             DownloadApp()
         }
