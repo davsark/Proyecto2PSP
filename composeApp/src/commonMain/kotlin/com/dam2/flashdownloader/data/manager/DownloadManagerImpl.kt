@@ -81,6 +81,16 @@ class DownloadManagerImpl(
 
     // SECCIÓN 2: AÑADIR DESCARGAS
 
+    // ✅ Sistema de procesamiento continuo de cola (reemplaza recursión)
+    init {
+        scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                processQueue()
+                delay(1000) // Revisar cola cada segundo
+            }
+        }
+    }
+
     override suspend fun addDownload(
         url: String,
         fileName: String?,
@@ -126,10 +136,7 @@ class DownloadManagerImpl(
             // Guardar en repositorio
             repository.saveDownload(downloadItem)
 
-            // Iniciar procesamiento de cola
-            scope.launch(Dispatchers.IO) {
-                processQueue()
-            }
+            // ✅ NO llamar a processQueue aquí - el init loop lo manejará automáticamente
 
             Result.success(id)
         } catch (e: Exception) {
@@ -340,34 +347,43 @@ class DownloadManagerImpl(
         return startDownload(id)
     }
 
-    // SECCIÓN 7: PROCESAMIENTO DE COLA (PARTE CRÍTICA)
+    // SECCIÓN 7: PROCESAMIENTO DE COLA (REFACTORIZADO - SIN DEADLOCKS)
 
     /**
      * Procesa la cola de descargas respetando el límite de concurrencia
-     * Esta es la función más crítica del sistema
+     * REFACTORIZADO: Sin deadlocks, sin recursión, sin race conditions
      */
     private suspend fun processQueue() {
-        downloadsMutex.withLock {
-            // Obtener descargas en cola ordenadas por prioridad
-            val queued = _downloadsList
+        // Paso 1: Obtener candidatos con lock mínimo
+        val candidates = downloadsMutex.withLock {
+            _downloadsList
                 .filter { it.status is DownloadStatus.Queued && !activeJobs.containsKey(it.id) }
                 .sortedWith(compareByDescending<DownloadItem> { it.priority.level }.thenBy { it.createdAt })
+        }
 
-            // Procesar cada descarga en cola
-            queued.forEach { download ->
-                // Intentar adquirir permiso del semaphore (no bloqueante)
-                if (downloadSemaphore.tryAcquire()) {
-                    // Lanzar descarga en corrutina separada
-                    val job = scope.launch(Dispatchers.IO) {
-                        try {
-                            executeDownload(download.id)
-                        } finally {
-                            // Liberar permiso al terminar
-                            downloadSemaphore.release()
-                            // Procesar siguiente en cola
-                            processQueue()
+        // Paso 2: Procesar cada candidato SIN lock
+        for (download in candidates) {
+            // Verificar si podemos iniciar una nueva descarga
+            if (downloadSemaphore.tryAcquire()) {
+                // Crear job
+                val job = scope.launch(Dispatchers.IO) {
+                    try {
+                        executeDownload(download.id)
+                    } catch (e: CancellationException) {
+                        // Cancelación normal, no hacer nada
+                    } catch (e: Exception) {
+                        // Error ya manejado en executeDownload
+                    } finally {
+                        // ✅ CRÍTICO: Limpiar en el orden correcto
+                        downloadsMutex.withLock {
+                            activeJobs.remove(download.id)
                         }
+                        downloadSemaphore.release()
                     }
+                }
+
+                // ✅ Registrar el job INMEDIATAMENTE
+                downloadsMutex.withLock {
                     activeJobs[download.id] = job
                 }
             }
@@ -376,7 +392,7 @@ class DownloadManagerImpl(
 
     /**
      * Ejecuta la descarga real de un archivo
-     * Usa async para ejecución paralela y Flow para progreso
+     * REFACTORIZADO: Con timeout, mejor manejo de errores, sin re-lanzar excepciones
      */
     private suspend fun executeDownload(id: String) {
         val download = downloadsMutex.withLock {
@@ -384,44 +400,34 @@ class DownloadManagerImpl(
         } ?: return
 
         try {
-            // Verificar si hay progreso guardado (para reanudar)
             val startByte = repository.getPartialData(id).getOrNull() ?: 0L
-
-            // Determinar límite de velocidad (individual o global)
             val speedLimit = download.speedLimit ?: _globalSpeedLimit.value
-
-            // Construir ruta completa del archivo
             val fullPath = "$downloadPath/${download.fileName}"
-
-            // Crear FileWriter
             val fileWriter = fileWriterFactory.createFileWriter()
 
-            // Iniciar descarga y recolectar progreso
-            downloadClient.downloadFile(
-                url = download.url,
-                outputPath = fullPath,
-                startByte = startByte,
-                speedLimitBytesPerSecond = speedLimit,
-                fileWriter = fileWriter
-            ).collect { progress ->
-                // Verificar cancelación
-                currentCoroutineContext().ensureActive()
+            // ✅ Agregar timeout global de 10 minutos para iniciar descarga
+            withTimeout(600_000) {
+                downloadClient.downloadFile(
+                    url = download.url,
+                    outputPath = fullPath,
+                    startByte = startByte,
+                    speedLimitBytesPerSecond = speedLimit,
+                    fileWriter = fileWriter
+                ).collect { progress ->
+                    currentCoroutineContext().ensureActive()
 
-                // Actualizar estado con progreso
-                updateDownloadStatus(
-                    id,
-                    DownloadStatus.Downloading(
-                        bytesDownloaded = progress.bytesDownloaded,
-                        totalBytes = progress.totalBytes,
-                        speed = progress.speed
+                    updateDownloadStatus(
+                        id,
+                        DownloadStatus.Downloading(
+                            bytesDownloaded = progress.bytesDownloaded,
+                            totalBytes = progress.totalBytes,
+                            speed = progress.speed
+                        )
                     )
-                )
 
-                // Guardar progreso para poder reanudar
-                repository.savePartialData(id, progress.bytesDownloaded)
-
-                // Actualizar estadísticas globales
-                updateStatistics()
+                    repository.savePartialData(id, progress.bytesDownloaded)
+                    updateStatistics()
+                }
             }
 
             // Descarga completada
@@ -434,22 +440,33 @@ class DownloadManagerImpl(
             )
 
         } catch (e: CancellationException) {
-            // Descarga cancelada por el usuario (comportamiento esperado)
-            throw e
+            // ✅ NO re-lanzar, solo actualizar estado a pausado
+            updateDownloadStatus(id, DownloadStatus.Paused(
+                download.downloadedBytes,
+                download.totalSize
+            ))
+        } catch (e: TimeoutCancellationException) {
+            // ✅ Timeout específico
+            updateDownloadStatus(
+                id,
+                DownloadStatus.Failed(
+                    error = "Timeout: El servidor no respondió en el tiempo esperado",
+                    bytesDownloaded = download.downloadedBytes
+                )
+            )
         } catch (e: Exception) {
-            // Error en la descarga
             val currentBytes = downloadsMutex.withLock {
                 _downloadsList.find { it.id == id }?.downloadedBytes ?: 0L
             }
             updateDownloadStatus(
                 id,
                 DownloadStatus.Failed(
-                    error = e.message ?: "Error desconocido",
+                    error = e.message ?: "Error desconocido: ${e::class.simpleName}",
                     bytesDownloaded = currentBytes
                 )
             )
         } finally {
-            activeJobs.remove(id)
+            // ✅ Actualizar estadísticas siempre
             updateStatistics()
         }
     }

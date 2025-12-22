@@ -78,6 +78,12 @@ class DownloadClient(private val httpClient: HttpClient) {
                 if (startByte > 0) {
                     header(HttpHeaders.Range, "bytes=$startByte-")
                 }
+                // ✅ AGREGAR TIMEOUTS para evitar descargas colgadas
+                timeout {
+                    requestTimeoutMillis = 300_000  // 5 minutos
+                    connectTimeoutMillis = 30_000   // 30 segundos
+                    socketTimeoutMillis = 30_000    // 30 segundos
+                }
             }.execute()
 
             val contentLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: -1L
@@ -139,11 +145,13 @@ class DownloadClient(private val httpClient: HttpClient) {
                 )
             )
 
-            fileWriter.close()
-
-        } catch (e: Exception) {
-            fileWriter.close()
-            throw e
+        } finally {
+            // ✅ SIEMPRE cerrar el archivo, incluso si hay errores
+            try {
+                fileWriter.close()
+            } catch (e: Exception) {
+                // Ignorar errores al cerrar
+            }
         }
     }
 
