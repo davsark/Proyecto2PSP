@@ -101,7 +101,7 @@ fun DownloadApp(
                         selected = selectedNavItem == 1,
                         onClick = {
                             selectedNavItem = 1
-                            viewModel.filterByStatus(DownloadStatusFilter.DOWNLOADING)
+                            viewModel.filterByStatus(DownloadStatusFilter.ACTIVE)
                         }
                     )
 
