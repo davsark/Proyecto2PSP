@@ -43,17 +43,33 @@ fun TopBar(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Primera fila: Título y acciones principales
+            // Primera fila: Logo, Título y acciones principales
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Flash Downloader",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                // Logo y título
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Logo de la aplicación
+                    // TODO: Reemplazar con logo real desde resources
+                    // Colocar el archivo logo.png en composeApp/src/commonMain/composeResources/drawable/
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = "Flash Downloader Logo",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(40.dp)
+                    )
+
+                    Text(
+                        text = "Flash Downloader",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Añadir descarga

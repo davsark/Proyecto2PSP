@@ -73,7 +73,21 @@ fun DownloadApp(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Flash Downloader") },
+                    title = {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Logo de la aplicación
+                            // TODO: Reemplazar con logo real desde resources
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = "Flash Downloader Logo",
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text("Flash Downloader")
+                        }
+                    },
                     actions = {
                         // Filtros
                         var showFilterMenu by remember { mutableStateOf(false) }
