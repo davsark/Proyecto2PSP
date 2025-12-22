@@ -26,7 +26,7 @@ class DownloadService : Service() {
     }
 
     // Inyección de dependencias via Koin
-    private val downloadManager: DownloadManager by inject()
+    private val manager: DownloadManager by inject()
     
     // Helper para notificaciones
     private lateinit var notificationHelper: NotificationHelper
@@ -59,7 +59,7 @@ class DownloadService : Service() {
         
         // Cargar descargas guardadas
         serviceScope.launch {
-            downloadManager.loadSavedDownloads()
+            manager.loadSavedDownloads()
         }
         
         // Observar estadísticas para actualizar notificación
@@ -73,12 +73,12 @@ class DownloadService : Service() {
         when (intent?.action) {
             NotificationHelper.ACTION_PAUSE_ALL -> {
                 serviceScope.launch {
-                    downloadManager.pauseAllDownloads()
+                    manager.pauseAllDownloads()
                 }
             }
             NotificationHelper.ACTION_CANCEL_ALL -> {
                 serviceScope.launch {
-                    downloadManager.cancelAll()
+                    manager.cancelAll()
                 }
             }
         }
@@ -101,7 +101,7 @@ class DownloadService : Service() {
         
         // Detener el DownloadManager
         serviceScope.launch {
-            downloadManager.shutdown()
+            manager.shutdown()
         }
         
         // Cancelar todas las corrutinas del servicio
@@ -116,7 +116,7 @@ class DownloadService : Service() {
      */
     private fun startObservingStatistics() {
         statisticsJob = serviceScope.launch {
-            downloadManager.statistics.collectLatest { statistics ->
+            manager.statistics.collectLatest { statistics ->
                 // Actualizar notificación con estadísticas actuales
                 notificationHelper.updateNotification(statistics)
                 
@@ -137,5 +137,5 @@ class DownloadService : Service() {
     /**
      * Obtiene el DownloadManager (para uso desde la Activity si es necesario)
      */
-    fun getDownloadManager(): DownloadManager = downloadManager
+    fun getDownloadManager(): DownloadManager = manager
 }
