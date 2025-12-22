@@ -3,12 +3,15 @@ package com.dam2.flashdownloader.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dam2.flashdownloader.presentation.viewmodel.DownloadViewModel
+import com.dam2.flashdownloader.presentation.viewmodel.DownloadStatusFilter
 import com.dam2.flashdownloader.presentation.viewmodel.UiEvent
 import com.dam2.flashdownloader.ui.components.DownloadListItem
 import com.dam2.flashdownloader.ui.components.StatisticsPanel
@@ -63,6 +66,9 @@ fun DownloadApp(
         }
     }
 
+    // Estado de navegación
+    var selectedNavItem by remember { mutableStateOf(0) }
+
     FlashDownloaderTheme(darkTheme = isDarkTheme) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -72,6 +78,66 @@ fun DownloadApp(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
+                // 🔹 NAVIGATION RAIL IZQUIERDA
+                NavigationRail(
+                    modifier = Modifier.fillMaxHeight()
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.CloudDownload, "Todas") },
+                        label = { Text("Todas") },
+                        selected = selectedNavItem == 0,
+                        onClick = {
+                            selectedNavItem = 0
+                            viewModel.filterByStatus(null)
+                            viewModel.filterByCategory(null)
+                        }
+                    )
+
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.Download, "Descargando") },
+                        label = { Text("Activas") },
+                        selected = selectedNavItem == 1,
+                        onClick = {
+                            selectedNavItem = 1
+                            viewModel.filterByStatus(DownloadStatusFilter.DOWNLOADING)
+                        }
+                    )
+
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.CheckCircle, "Completadas") },
+                        label = { Text("Completas") },
+                        selected = selectedNavItem == 2,
+                        onClick = {
+                            selectedNavItem = 2
+                            viewModel.filterByStatus(DownloadStatusFilter.COMPLETED)
+                        }
+                    )
+
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.Error, "Fallidas") },
+                        label = { Text("Fallidas") },
+                        selected = selectedNavItem == 3,
+                        onClick = {
+                            selectedNavItem = 3
+                            viewModel.filterByStatus(DownloadStatusFilter.FAILED)
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.Settings, "Configuración") },
+                        label = { Text("Ajustes") },
+                        selected = selectedNavItem == 4,
+                        onClick = {
+                            selectedNavItem = 4
+                            viewModel.showSettingsDialog()
+                        }
+                    )
+                }
+
                 // Contenido principal
                 Column(
                     modifier = Modifier
