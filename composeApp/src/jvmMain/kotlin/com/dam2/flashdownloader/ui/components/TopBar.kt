@@ -1,5 +1,6 @@
 package com.dam2.flashdownloader.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -10,6 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dam2.flashdownloader.domain.model.Category
 import com.dam2.flashdownloader.presentation.viewmodel.DownloadStatusFilter
+import org.jetbrains.compose.resources.painterResource
+import flashdownloader.composeapp.generated.resources.Res
+import flashdownloader.composeapp.generated.resources.logo
 
 /**
  * Barra superior con controles globales y filtros
@@ -55,12 +59,9 @@ fun TopBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Logo de la aplicación
-                    // TODO: Reemplazar con logo real desde resources
-                    // Colocar el archivo logo.png en composeApp/src/commonMain/composeResources/drawable/
-                    Icon(
-                        imageVector = Icons.Default.CloudDownload,
+                    Image(
+                        painter = painterResource(Res.drawable.logo),
                         contentDescription = "Flash Downloader Logo",
-                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(40.dp)
                     )
 

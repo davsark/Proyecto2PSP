@@ -1,5 +1,6 @@
 package com.dam2.flashdownloader.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,9 @@ import com.dam2.flashdownloader.ui.theme.FlashDownloaderTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.jetbrains.compose.resources.painterResource
+import flashdownloader.composeapp.generated.resources.Res
+import flashdownloader.composeapp.generated.resources.logo
 
 /**
  * Aplicación principal de Android
@@ -79,9 +83,8 @@ fun DownloadApp(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Logo de la aplicación
-                            // TODO: Reemplazar con logo real desde resources
-                            Icon(
-                                imageVector = Icons.Default.CloudDownload,
+                            Image(
+                                painter = painterResource(Res.drawable.logo),
                                 contentDescription = "Flash Downloader Logo",
                                 modifier = Modifier.size(28.dp)
                             )
