@@ -58,8 +58,10 @@ class DownloadClient(private val httpClient: HttpClient) {
         var lastEmitTime = System.currentTimeMillis()
         var bytesDownloadedSinceLastEmit = 0L
         var currentSpeed = 0L
+        var bytesSinceLastFlush = 0L
+        var lastFlushTime = System.currentTimeMillis()
 
-        // ✅ FIX: Token Bucket para límite de velocidad
+        // ✅ Token Bucket para límite de velocidad
         var tokenBucket = 0.0
         var lastTokenRefill = System.currentTimeMillis()
 
@@ -79,8 +81,8 @@ class DownloadClient(private val httpClient: HttpClient) {
 
             val channel: ByteReadChannel = response.bodyAsChannel()
             
-            // ✅ FIX: Buffer GRANDE para archivos grandes (1MB)
-            val buffer = ByteArray(LARGE_BUFFER_SIZE)
+            // ✅ Buffer de 64KB (estándar industria)
+            val buffer = ByteArray(BUFFER_SIZE)
 
             fileWriter.openForWrite(outputPath, startByte > 0)
 
@@ -88,22 +90,19 @@ class DownloadClient(private val httpClient: HttpClient) {
                 val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
                 if (bytesRead <= 0) break
 
-                // ✅ FIX: Aplicar límite de velocidad CORRECTAMENTE
+                // ✅ Aplicar límite de velocidad
                 if (speedLimitBytesPerSecond != null && speedLimitBytesPerSecond > 0) {
                     val currentTime = System.currentTimeMillis()
                     val timeDelta = (currentTime - lastTokenRefill) / 1000.0
 
-                    // Rellenar tokens
                     tokenBucket += timeDelta * speedLimitBytesPerSecond
                     if (tokenBucket > speedLimitBytesPerSecond.toDouble()) {
                         tokenBucket = speedLimitBytesPerSecond.toDouble()
                     }
                     lastTokenRefill = currentTime
 
-                    // Consumir tokens
                     tokenBucket -= bytesRead
 
-                    // Si no hay tokens, esperar
                     if (tokenBucket < 0) {
                         val deficit = -tokenBucket
                         val delayMs = ((deficit / speedLimitBytesPerSecond) * 1000).toLong()
@@ -118,11 +117,20 @@ class DownloadClient(private val httpClient: HttpClient) {
                 fileWriter.write(buffer, 0, bytesRead)
                 totalBytesDownloaded += bytesRead
                 bytesDownloadedSinceLastEmit += bytesRead
+                bytesSinceLastFlush += bytesRead
 
-                // ✅ FIX: Emitir progreso cada 200ms (más frecuente)
+                // ✅ Flush periódico cada 10MB o 30 segundos
                 val currentTime = System.currentTimeMillis()
+                if (bytesSinceLastFlush >= FLUSH_INTERVAL_BYTES || 
+                    (currentTime - lastFlushTime) >= FLUSH_INTERVAL_MS) {
+                    fileWriter.flush()
+                    bytesSinceLastFlush = 0L
+                    lastFlushTime = currentTime
+                }
+
+                // ✅ Emitir progreso cada 500ms O cada 1MB
                 val timeDiff = currentTime - lastEmitTime
-                if (timeDiff >= 200) {
+                if (timeDiff >= 500 || bytesDownloadedSinceLastEmit >= 1024 * 1024) {
                     currentSpeed = if (timeDiff > 0) {
                         (bytesDownloadedSinceLastEmit * 1000) / timeDiff
                     } else {
@@ -142,6 +150,9 @@ class DownloadClient(private val httpClient: HttpClient) {
                 }
             }
 
+            // Flush final
+            fileWriter.flush()
+
             // Emitir progreso final
             emit(
                 DownloadProgress(
@@ -153,6 +164,15 @@ class DownloadClient(private val httpClient: HttpClient) {
 
             fileWriter.close()
 
+        } catch (e: java.net.SocketTimeoutException) {
+            fileWriter.close()
+            throw Exception("Socket timeout - conexión muy lenta o perdida", e)
+        } catch (e: java.net.UnknownHostException) {
+            fileWriter.close()
+            throw Exception("No se pudo resolver el host: ${e.message}", e)
+        } catch (e: java.io.IOException) {
+            fileWriter.close()
+            throw Exception("Error de red: ${e.message}", e)
         } catch (e: Exception) {
             fileWriter.close()
             throw e
@@ -171,14 +191,21 @@ class DownloadClient(private val httpClient: HttpClient) {
     }
 
     companion object {
-        // ✅ FIX: Buffer de 1MB para archivos grandes
-        private const val LARGE_BUFFER_SIZE = 1024 * 1024 // 1MB
+        // ✅ Buffer de 64KB (estándar industria, tamaño ventana TCP)
+        private const val BUFFER_SIZE = 64 * 1024 // 64KB
+        
+        // ✅ Flush cada 10MB para asegurar datos en disco
+        private const val FLUSH_INTERVAL_BYTES = 10 * 1024 * 1024 // 10MB
+        
+        // ✅ Flush cada 30 segundos como máximo
+        private const val FLUSH_INTERVAL_MS = 30_000L // 30 segundos
     }
 }
 
 interface FileWriter {
     fun openForWrite(path: String, append: Boolean)
     fun write(buffer: ByteArray, offset: Int, length: Int)
+    fun flush()  // ✅ Flush datos al disco
     fun close()
     fun delete(path: String): Boolean
 }

@@ -620,14 +620,21 @@ class DownloadManagerImpl(
                     updateStatistics()
                 }
 
-                // ✅ Calcular hash tras descarga exitosa
-                val calculatedHash = withContext(Dispatchers.Default) {
-                    try {
-                        com.dam2.flashdownloader.utils.HashUtils.calculateSHA256(fullPath)
-                    } catch (e: Exception) {
-                        println("Warning: Could not calculate hash: ${e.message}")
-                        null
+                // ✅ Calcular hash solo para archivos menores de 500MB
+                // Para archivos grandes (2GB+), el cálculo puede tomar minutos y bloquear la app
+                val calculatedHash = if (metadata.totalBytes > 0 && metadata.totalBytes < 500 * 1024 * 1024) {
+                    withContext(Dispatchers.Default) {
+                        try {
+                            com.dam2.flashdownloader.utils.HashUtils.calculateSHA256(fullPath)
+                        } catch (e: Exception) {
+                            println("Warning: Could not calculate hash: ${e.message}")
+                            null
+                        }
                     }
+                } else {
+                    // Archivos grandes: skip hash calculation para evitar bloqueo
+                    println("Skipping hash calculation for large file (${metadata.totalBytes / (1024 * 1024)} MB)")
+                    null
                 }
 
                 // Descarga completada
@@ -640,6 +647,11 @@ class DownloadManagerImpl(
                     ),
                     forcePersist = true
                 )
+                
+                // ✅ CRÍTICO: Limpiar mapas de tracking para evitar memory leak
+                bytesTracker.remove(id)
+                speedTracker.remove(id)
+                lastPersistTime.remove(id)
                 
                 return // Éxito - salir
 
@@ -676,6 +688,11 @@ class DownloadManagerImpl(
                         ),
                         forcePersist = true
                     )
+                    
+                    // ✅ CRÍTICO: Limpiar mapas de tracking para evitar memory leak
+                    bytesTracker.remove(id)
+                    speedTracker.remove(id)
+                    lastPersistTime.remove(id)
                 }
             } catch (e: Exception) {
                 val currentBytes = downloadsMutex.withLock {
@@ -689,6 +706,12 @@ class DownloadManagerImpl(
                     ),
                     forcePersist = true
                 )
+                
+                // ✅ CRÍTICO: Limpiar mapas de tracking para evitar memory leak
+                bytesTracker.remove(id)
+                speedTracker.remove(id)
+                lastPersistTime.remove(id)
+                
                 return
             } finally {
                 if (retryCount > maxRetries || lastException !is java.io.IOException) {

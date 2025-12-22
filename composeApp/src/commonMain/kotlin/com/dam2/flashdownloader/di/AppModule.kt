@@ -28,11 +28,15 @@ fun commonModule() = module {
                 maxConnectionsCount = 1000
                 endpoint {
                     maxConnectionsPerRoute = 100
-                    pipelineMaxSize = 50  // ✅ Aumentado para mejor throughput
-                    keepAliveTime = 300_000  // ✅ 5 minutos (mantener conexión viva)
-                    connectTimeout = 120_000  // ✅ 2 minutos para establecer conexión
-                    connectAttempts = 5
-                    socketTimeout = 600_000  // ✅ 10 minutos sin recibir datos
+                    pipelineMaxSize = 20  // ✅ Reducido de 50 para estabilidad
+                    keepAliveTime = 600_000  // ✅ 10 minutos (mantener conexión viva)
+                    connectTimeout = 180_000  // ✅ 3 minutos para establecer conexión
+                    connectAttempts = 10  // ✅ Aumentado de 5 a 10
+                    socketTimeout = 900_000  // ✅ 15 minutos sin recibir datos
+                }
+                // ✅ Configuración adicional para archivos muy grandes
+                https {
+                    trustManager = null  // Usar el trust manager del sistema
                 }
             }
 
@@ -44,9 +48,9 @@ fun commonModule() = module {
 
             // ✅ CRÍTICO: Configurar timeouts HTTP para archivos grandes (2GB+)
             install(HttpTimeout) {
-                connectTimeoutMillis = 120_000  // ✅ 2 minutos para conectar
-                socketTimeoutMillis = 600_000   // ✅ 10 minutos entre bytes (permite descargas lentas)
-                requestTimeoutMillis = null     // ✅ SIN LÍMITE total para descargas largas (horas si es necesario)
+                connectTimeoutMillis = 180_000  // ✅ 3 minutos para conectar
+                socketTimeoutMillis = 900_000   // ✅ 15 minutos entre bytes
+                requestTimeoutMillis = null     // ✅ SIN LÍMITE total para descargas largas
             }
         }
     }

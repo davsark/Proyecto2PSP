@@ -101,6 +101,15 @@ class AndroidFileWriter(private val context: Context) : FileWriter {
         outputStream?.write(buffer, offset, length)
     }
 
+    override fun flush() {
+        try {
+            outputStream?.flush()
+        } catch (e: Exception) {
+            android.util.Log.e("AndroidFileWriter", "Error haciendo flush", e)
+            // No lanzar excepción, flush es best-effort
+        }
+    }
+
     override fun close() {
         try {
             outputStream?.flush()

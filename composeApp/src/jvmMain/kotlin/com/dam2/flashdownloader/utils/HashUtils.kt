@@ -19,8 +19,8 @@ actual object HashUtils {
             }
             
             val digest = MessageDigest.getInstance("SHA-256")
-            // ✅ Buffer de 1MB para archivos grandes
-            val buffer = ByteArray(1024 * 1024)
+            // ✅ Buffer de 64KB (estándar industria)
+            val buffer = ByteArray(64 * 1024)
             
             FileInputStream(file).use { fis ->
                 var bytesRead: Int

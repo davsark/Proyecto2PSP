@@ -40,6 +40,16 @@ class JvmFileWriter : FileWriter {
         }
     }
 
+    override fun flush() {
+        try {
+            randomAccessFile?.fd?.sync()  // Flush to disk for RandomAccessFile
+            outputStream?.flush()  // Flush for FileOutputStream
+        } catch (e: Exception) {
+            println("Error haciendo flush: ${e.message}")
+            // No lanzar excepción, flush es best-effort
+        }
+    }
+
     override fun close() {
         try {
             randomAccessFile?.close()
