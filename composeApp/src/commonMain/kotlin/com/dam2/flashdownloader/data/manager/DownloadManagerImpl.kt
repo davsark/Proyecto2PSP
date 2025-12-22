@@ -429,29 +429,28 @@ class DownloadManagerImpl(
                 )
             )
 
-            // ✅ Agregar timeout global de 10 minutos para iniciar descarga
-            withTimeout(600_000) {
-                downloadClient.downloadFile(
-                    url = download.url,
-                    outputPath = fullPath,
-                    startByte = startByte,
-                    speedLimitBytesPerSecond = speedLimit,
-                    fileWriter = fileWriter
-                ).collect { progress ->
-                    currentCoroutineContext().ensureActive()
+            // ✅ Descarga sin timeout de request (permitir archivos grandes)
+            // Los timeouts de conexión y socket están configurados en el HttpClient
+            downloadClient.downloadFile(
+                url = download.url,
+                outputPath = fullPath,
+                startByte = startByte,
+                speedLimitBytesPerSecond = speedLimit,
+                fileWriter = fileWriter
+            ).collect { progress ->
+                currentCoroutineContext().ensureActive()
 
-                    updateDownloadStatus(
-                        id,
-                        DownloadStatus.Downloading(
-                            bytesDownloaded = progress.bytesDownloaded,
-                            totalBytes = progress.totalBytes,
-                            speed = progress.speed
-                        )
+                updateDownloadStatus(
+                    id,
+                    DownloadStatus.Downloading(
+                        bytesDownloaded = progress.bytesDownloaded,
+                        totalBytes = progress.totalBytes,
+                        speed = progress.speed
                     )
+                )
 
-                    repository.savePartialData(id, progress.bytesDownloaded)
-                    updateStatistics()
-                }
+                repository.savePartialData(id, progress.bytesDownloaded)
+                updateStatistics()
             }
 
             // Descarga completada
@@ -469,15 +468,6 @@ class DownloadManagerImpl(
                 download.downloadedBytes,
                 download.totalSize
             ))
-        } catch (e: TimeoutCancellationException) {
-            // ✅ Timeout específico
-            updateDownloadStatus(
-                id,
-                DownloadStatus.Failed(
-                    error = "Timeout: El servidor no respondió en el tiempo esperado",
-                    bytesDownloaded = download.downloadedBytes
-                )
-            )
         } catch (e: Exception) {
             val currentBytes = downloadsMutex.withLock {
                 _downloadsList.find { it.id == id }?.downloadedBytes ?: 0L

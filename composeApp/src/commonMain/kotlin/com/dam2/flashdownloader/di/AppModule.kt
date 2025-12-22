@@ -8,6 +8,7 @@ import com.dam2.flashdownloader.domain.repository.DownloadRepository
 import com.dam2.flashdownloader.presentation.viewmodel.DownloadViewModel
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,9 +30,17 @@ fun commonModule() = module {
                     maxConnectionsPerRoute = 100
                     pipelineMaxSize = 20
                     keepAliveTime = 5000
-                    connectTimeout = 5000
+                    connectTimeout = 30_000 // 30 segundos para establecer conexión
                     connectAttempts = 5
+                    socketTimeout = 60_000 // 60 segundos sin recibir datos = conexión muerta
                 }
+            }
+
+            // ✅ CRÍTICO: Configurar timeouts HTTP para archivos grandes
+            install(HttpTimeout) {
+                connectTimeoutMillis = 30_000 // 30s para conectar
+                socketTimeoutMillis = 60_000  // 60s entre bytes (detecta stalls)
+                requestTimeoutMillis = null   // ✅ SIN LÍMITE para descargas largas
             }
         }
     }
