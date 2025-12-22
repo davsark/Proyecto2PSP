@@ -170,7 +170,9 @@ class DownloadManagerImpl(
             // ✅ Lock MÍNIMO: solo para añadir a la lista
             downloadsMutex.withLock {
                 _downloadsList.add(downloadItem)
-                updateDownloadsFlow()
+                // ✅ Actualizar StateFlow directamente (ya tenemos el lock)
+                // NO llamar a funciones que intenten adquirir el lock de nuevo
+                _downloads.value = _downloadsList.toList()
             }
 
             // Guardar en repositorio (SIN lock)
@@ -268,7 +270,7 @@ class DownloadManagerImpl(
         // Eliminar de la lista con lock mínimo
         downloadsMutex.withLock {
             _downloadsList.removeAll { it.id == id }
-            updateDownloadsFlow()
+            _downloads.value = _downloadsList.toList()
         }
 
         // Eliminar del repositorio (sin lock)
@@ -306,7 +308,7 @@ class DownloadManagerImpl(
     override suspend fun clearCompleted(): Result<Unit> = withContext(Dispatchers.IO) {
         downloadsMutex.withLock {
             _downloadsList.removeAll { it.status is DownloadStatus.Completed }
-            updateDownloadsFlow()
+            _downloads.value = _downloadsList.toList()
         }
         repository.clearCompleted()
         Result.success(Unit)
@@ -323,7 +325,7 @@ class DownloadManagerImpl(
 
             val download = _downloadsList[index]
             _downloadsList[index] = download.copy(priority = newPriority)
-            updateDownloadsFlow()
+            _downloads.value = _downloadsList.toList()
         }
 
         // Actualizar repositorio sin lock
@@ -415,7 +417,7 @@ class DownloadManagerImpl(
             }
 
             _downloadsList[index] = _downloadsList[index].copy(speedLimit = bytesPerSecond)
-            updateDownloadsFlow()
+            _downloads.value = _downloadsList.toList()
         }
 
         Result.success(Unit)
@@ -497,11 +499,34 @@ class DownloadManagerImpl(
         // Record start time for elapsed time tracking
         val downloadStartTime = System.currentTimeMillis()
 
+        // ✅ FEEDBACK INMEDIATO: Cambiar a estado Downloading AHORA
+        // Esto evita que el usuario vea "En cola" mientras conectamos
+        updateDownloadStatus(
+            id,
+            DownloadStatus.Downloading(
+                bytesDownloaded = 0,
+                totalBytes = -1, // Indeterminado hasta obtener metadatos
+                speed = 0
+            )
+        )
+
         while (retryCount <= maxRetries) {
             try {
                 // Obtener metadatos del archivo
                 val metadataResult = downloadClient.getFileMetadata(download.url)
                 val metadata = metadataResult.getOrNull() ?: DownloadMetadata()
+
+                // Si obtenemos metadatos, actualizamos el estado con el tamaño real
+                if (metadata.totalBytes > 0) {
+                     updateDownloadStatus(
+                        id,
+                        DownloadStatus.Downloading(
+                            bytesDownloaded = 0,
+                            totalBytes = metadata.totalBytes,
+                            speed = 0
+                        )
+                    )
+                }
 
                 // ✅ FIX: Verificación de espacio mejorada
                 if (metadata.totalBytes > 0) {
@@ -540,7 +565,7 @@ class DownloadManagerImpl(
                             fileName = updatedFileName,
                             metadata = metadata
                         )
-                        updateDownloadsFlow()
+                        _downloads.value = _downloadsList.toList()
                     }
                 }
 
@@ -615,12 +640,6 @@ class DownloadManagerImpl(
                     // Actualizar tracker
                     bytesTracker[id] = progress.bytesDownloaded
                     speedTracker[id] = currentSpeed
-
-                    // ✅ DEBUG: Verificar recepción de progreso
-                    if (progress.totalBytes > 0) {
-                         val pct = (progress.bytesDownloaded * 100 / progress.totalBytes)
-                         println("⚡ COLLECT: $id - ${progress.bytesDownloaded}/${progress.totalBytes} ($pct%)")
-                    }
 
                     // ✅ Actualizar estado con velocidad correcta
                     updateDownloadStatus(
@@ -753,32 +772,30 @@ class DownloadManagerImpl(
      * ✅ OPTIMIZADO: Repository update FUERA del lock para reducir contención
      */
     private suspend fun updateDownloadStatus(id: String, newStatus: DownloadStatus, forcePersist: Boolean = false) {
-        val updatedDownload = downloadsMutex.withLock {
+        // Paso 1: Modificar la lista y obtener snapshot actualizado dentro del lock
+        val (updatedDownloadItem, newListSnapshot) = downloadsMutex.withLock {
             val index = _downloadsList.indexOfFirst { it.id == id }
             if (index != -1) {
                 _downloadsList[index] = _downloadsList[index].copy(status = newStatus)
-                _downloadsList[index]
+                // Retornamos el item modificado y una COPIA de la lista completa
+                Pair(_downloadsList[index], _downloadsList.toList())
             } else {
-                null
+                Pair(null, null)
             }
         }
         
-        // ✅ CRÍTICO: Usar update{} para forzar recomposición en Compose
-        _downloads.update { downloadsMutex.withLock { _downloadsList.toList() } }
+        // Paso 2: Actualizar StateFlow con el snapshot (Thread-safe y seguro para Compose)
+        // Al asignar una nueva referencia de lista, Compose detectará el cambio
+        if (newListSnapshot != null) {
+            _downloads.value = newListSnapshot
+        }
 
-        // ✅ Actualizar repositorio FUERA del lock (solo si forcePersist)
-        if (forcePersist) {
-            updatedDownload?.let { repository.updateDownload(it) }
+        // Paso 3: Persistencia (Fuera del lock de memoria, pero async)
+        if (forcePersist && updatedDownloadItem != null) {
+            repository.updateDownload(updatedDownloadItem)
         }
     }
 
-    /**
-     * Actualiza el StateFlow de descargas
-     */
-    private fun updateDownloadsFlow() {
-        // ✅ Usar update{} para mejor reactividad
-        _downloads.update { _downloadsList.toList() }
-    }
 
     /**
      * Actualiza las estadísticas globales
@@ -862,7 +879,7 @@ class DownloadManagerImpl(
                         }
                     }
                 )
-                updateDownloadsFlow()
+                _downloads.value = _downloadsList.toList()
             }
             updateStatistics()
             Result.success(Unit)

@@ -107,95 +107,103 @@ class DownloadClient(private val httpClient: HttpClient) {
         var lastTokenRefill = System.currentTimeMillis()
 
         try {
-            val response = httpClient.prepareGet(url) {
+            // ✅ USAR prepareGet().execute {} para garantizar STREAMING puro
+            httpClient.prepareGet(url) {
                 if (startByte > 0) {
                     header(HttpHeaders.Range, "bytes=$startByte-")
                 }
-            }.execute()
-
-            val contentLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: -1L
-            val totalBytes = if (startByte > 0 && contentLength > 0) {
-                startByte + contentLength
-            } else {
-                contentLength
-            }
-
-            val channel: ByteReadChannel = response.bodyAsChannel()
-            
-            // ✅ Buffer de 64KB (estándar industria)
-            val buffer = ByteArray(BUFFER_SIZE)
-
-            fileWriter.openForWrite(outputPath, startByte > 0)
-
-            while (!channel.isClosedForRead && coroutineContext.isActive) {
-                val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
-                if (bytesRead <= 0) break
-
-                // ✅ Aplicar límite de velocidad
-                if (speedLimitBytesPerSecond != null && speedLimitBytesPerSecond > 0) {
-                    val currentTime = System.currentTimeMillis()
-                    val timeDelta = (currentTime - lastTokenRefill) / 1000.0
-
-                    tokenBucket += timeDelta * speedLimitBytesPerSecond
-                    if (tokenBucket > speedLimitBytesPerSecond.toDouble()) {
-                        tokenBucket = speedLimitBytesPerSecond.toDouble()
-                    }
-                    lastTokenRefill = currentTime
-
-                    tokenBucket -= bytesRead
-
-                    if (tokenBucket < 0) {
-                        val deficit = -tokenBucket
-                        val delayMs = ((deficit / speedLimitBytesPerSecond) * 1000).toLong()
-                        if (delayMs > 0) {
-                            delay(delayMs)
-                        }
-                        tokenBucket = 0.0
-                    }
+            }.execute { response ->
+                val contentLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: -1L
+                val contentRange = response.headers[HttpHeaders.ContentRange]
+                
+                val totalBytes = if (contentRange != null) {
+                    contentRange.substringAfter("/").trim().toLongOrNull() ?: -1L
+                } else if (startByte > 0 && contentLength > 0) {
+                     startByte + contentLength
+                } else {
+                     contentLength
                 }
 
-                // Escribir datos
-                fileWriter.write(buffer, 0, bytesRead)
-                totalBytesDownloaded += bytesRead
-                bytesDownloadedSinceLastEmit += bytesRead
-                bytesSinceLastFlush += bytesRead
+                val channel: ByteReadChannel = response.bodyAsChannel()
+                
+                // ✅ Buffer de 64KB (estándar industria)
+                val buffer = ByteArray(BUFFER_SIZE)
 
-                // ✅ Flush periódico cada 10MB o 30 segundos
-                val currentTime = System.currentTimeMillis()
-                if (bytesSinceLastFlush >= FLUSH_INTERVAL_BYTES || 
-                    (currentTime - lastFlushTime) >= FLUSH_INTERVAL_MS) {
-                    fileWriter.flush()
-                    bytesSinceLastFlush = 0L
-                    lastFlushTime = currentTime
-                }
-
-                // ✅ Emitir progreso
-                val timeDiff = currentTime - lastEmitTime
-                if (timeDiff >= 250 || bytesDownloadedSinceLastEmit >= 256 * 1024) {
-                    currentSpeed = if (timeDiff > 0) {
-                        (bytesDownloadedSinceLastEmit * 1000) / timeDiff
-                    } else {
-                        0L
-                    }
-
-                    // ✅ DEBUG: Verificar emisión
-                    if (totalBytes > 0) {
-                         val pct = (totalBytesDownloaded * 100 / totalBytes)
-                         println("📤 EMIT: ${totalBytesDownloaded}/${totalBytes} ($pct%)")
-                    }
-
-                    emit(
-                        DownloadProgress(
-                            bytesDownloaded = totalBytesDownloaded,
-                            totalBytes = totalBytes,
-                            speed = currentSpeed
-                        )
+                fileWriter.openForWrite(outputPath, startByte > 0)
+                
+                // ✅ FEEDBACK INMEDIATO: Emitir 0% YA
+                emit(
+                    DownloadProgress(
+                        bytesDownloaded = totalBytesDownloaded,
+                        totalBytes = totalBytes,
+                        speed = 0
                     )
+                )
 
-                    lastEmitTime = currentTime
-                    bytesDownloadedSinceLastEmit = 0L
+                while (!channel.isClosedForRead && coroutineContext.isActive) {
+                    val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
+                    if (bytesRead <= 0) break
+
+                    // ✅ Aplicar límite de velocidad
+                    if (speedLimitBytesPerSecond != null && speedLimitBytesPerSecond > 0) {
+                        val currentTime = System.currentTimeMillis()
+                        val timeDelta = (currentTime - lastTokenRefill) / 1000.0
+
+                        tokenBucket += timeDelta * speedLimitBytesPerSecond
+                        if (tokenBucket > speedLimitBytesPerSecond.toDouble()) {
+                            tokenBucket = speedLimitBytesPerSecond.toDouble()
+                        }
+                        lastTokenRefill = currentTime
+
+                        tokenBucket -= bytesRead
+                        
+                        if (tokenBucket < 0) {
+                             val deficit = -tokenBucket
+                             val delayMs = ((deficit / speedLimitBytesPerSecond) * 1000).toLong()
+                             if (delayMs > 0) {
+                                 delay(delayMs)
+                             }
+                             tokenBucket = 0.0
+                        }
+                    }
+
+                    // Escribir datos
+                    fileWriter.write(buffer, 0, bytesRead)
+                    totalBytesDownloaded += bytesRead
+                    bytesDownloadedSinceLastEmit += bytesRead
+                    bytesSinceLastFlush += bytesRead
+
+                    // ✅ Flush periódico
+                    val currentTime = System.currentTimeMillis()
+                    if (bytesSinceLastFlush >= FLUSH_INTERVAL_BYTES || 
+                        (currentTime - lastFlushTime) >= FLUSH_INTERVAL_MS) {
+                        fileWriter.flush()
+                        bytesSinceLastFlush = 0L
+                        lastFlushTime = currentTime
+                    }
+
+                    // ✅ Emitir progreso cada 100ms
+                    val timeDiff = currentTime - lastEmitTime
+                    if (timeDiff >= 100) {
+                        currentSpeed = if (timeDiff > 0) {
+                            (bytesDownloadedSinceLastEmit * 1000) / timeDiff
+                        } else {
+                            0L
+                        }
+
+                        emit(
+                            DownloadProgress(
+                                bytesDownloaded = totalBytesDownloaded,
+                                totalBytes = totalBytes,
+                                speed = currentSpeed
+                            )
+                        )
+
+                        lastEmitTime = currentTime
+                        bytesDownloadedSinceLastEmit = 0L
+                    }
                 }
-            }
+            } // Fin execute block
 
             // Flush final
             fileWriter.flush()
@@ -204,7 +212,7 @@ class DownloadClient(private val httpClient: HttpClient) {
             emit(
                 DownloadProgress(
                     bytesDownloaded = totalBytesDownloaded,
-                    totalBytes = totalBytes,
+                    totalBytes = if (totalBytesDownloaded > 0) totalBytesDownloaded else -1,
                     speed = 0L
                 )
             )
