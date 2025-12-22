@@ -85,8 +85,12 @@ class DownloadManagerImpl(
     init {
         scope.launch(Dispatchers.IO) {
             while (isActive) {
-                processQueue()
-                delay(1000) // Revisar cola cada segundo
+                try {
+                    processQueue()
+                } catch (e: Exception) {
+                    // Ignorar errores en el procesamiento de cola para no romper el loop
+                }
+                delay(500) // ✅ Revisar cola cada 500ms para mejor responsividad
             }
         }
     }
@@ -97,11 +101,11 @@ class DownloadManagerImpl(
         category: Category?,
         priority: Priority,
         speedLimit: Long?
-    ): Result<String> = downloadsMutex.withLock {
-        return try {
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
             // Validar URL
             if (!isValidUrl(url)) {
-                return Result.failure(IllegalArgumentException("URL inválida: $url"))
+                return@withContext Result.failure(IllegalArgumentException("URL inválida: $url"))
             }
 
             // Determinar nombre de archivo (sin llamada de red bloqueante)
@@ -129,11 +133,13 @@ class DownloadManagerImpl(
                 metadata = DownloadMetadata() // Se actualizará cuando inicie la descarga
             )
 
-            // Añadir a la lista
-            _downloadsList.add(downloadItem)
-            updateDownloadsFlow()
+            // ✅ Lock MÍNIMO: solo para añadir a la lista
+            downloadsMutex.withLock {
+                _downloadsList.add(downloadItem)
+                updateDownloadsFlow()
+            }
 
-            // Guardar en repositorio
+            // Guardar en repositorio (SIN lock)
             repository.saveDownload(downloadItem)
 
             // ✅ NO llamar a processQueue aquí - el init loop lo manejará automáticamente
@@ -158,32 +164,29 @@ class DownloadManagerImpl(
 
     // SECCIÓN 3: CONTROL DE DESCARGAS INDIVIDUALES
 
-    override suspend fun startDownload(id: String): Result<Unit> = downloadsMutex.withLock {
-        val download = _downloadsList.find { it.id == id }
-            ?: return Result.failure(Exception("Descarga no encontrada"))
+    override suspend fun startDownload(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val download = downloadsMutex.withLock {
+            _downloadsList.find { it.id == id }
+        } ?: return@withContext Result.failure(Exception("Descarga no encontrada"))
 
         if (download.status.isActive) {
-            return Result.failure(Exception("La descarga ya está activa"))
+            return@withContext Result.failure(Exception("La descarga ya está activa"))
         }
 
         // Cambiar estado a en cola
         updateDownloadStatus(id, DownloadStatus.Queued)
 
-        // Procesar cola
-        scope.launch(Dispatchers.IO) {
-            processQueue()
-        }
+        // El init loop procesará automáticamente la cola
 
         Result.success(Unit)
     }
 
-    override suspend fun pauseDownload(id: String): Result<Unit> {
-        // ✅ CRÍTICO: NO usar withLock aquí para evitar deadlock con updateDownloadStatus
+    override suspend fun pauseDownload(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         val download = downloadsMutex.withLock {
             _downloadsList.find { it.id == id }
-        } ?: return Result.failure(Exception("Descarga no encontrada"))
+        } ?: return@withContext Result.failure(Exception("Descarga no encontrada"))
 
-        // Cancelar el job activo (sin lock)
+        // Cancelar el job activo
         val job = downloadsMutex.withLock {
             activeJobs[id]?.also { activeJobs.remove(id) }
         }
@@ -202,15 +205,14 @@ class DownloadManagerImpl(
             }
         }
 
-        return Result.success(Unit)
+        Result.success(Unit)
     }
 
     override suspend fun resumeDownload(id: String): Result<Unit> {
         return startDownload(id) // Reusar la lógica de inicio
     }
 
-    override suspend fun cancelDownload(id: String): Result<Unit> {
-        // ✅ CRÍTICO: NO usar withLock para evitar deadlock
+    override suspend fun cancelDownload(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         val job = downloadsMutex.withLock {
             activeJobs[id]?.also { activeJobs.remove(id) }
         }
@@ -219,140 +221,150 @@ class DownloadManagerImpl(
         // Actualizar estado (usa su propio lock internamente)
         updateDownloadStatus(id, DownloadStatus.Cancelled)
 
-        return Result.success(Unit)
+        Result.success(Unit)
     }
 
-    override suspend fun removeDownload(id: String): Result<Unit> {
-        // ✅ CRÍTICO: Cancelar primero sin lock, luego actualizar con lock
+    override suspend fun removeDownload(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+        // Cancelar el job activo
         val job = downloadsMutex.withLock {
             activeJobs[id]?.also { activeJobs.remove(id) }
         }
         job?.cancel()
 
-        // Eliminar de la lista con lock
+        // Eliminar de la lista con lock mínimo
         downloadsMutex.withLock {
             _downloadsList.removeAll { it.id == id }
             updateDownloadsFlow()
         }
 
-        // Eliminar del repositorio
+        // Eliminar del repositorio (sin lock)
         repository.deleteDownload(id)
 
-        return Result.success(Unit)
+        Result.success(Unit)
     }
 
     // SECCIÓN 4: CONTROL GLOBAL
 
-    override suspend fun pauseAll(): Result<Unit> {
-        // ✅ CRÍTICO: Obtener IDs primero, LUEGO pausar sin lock
+    override suspend fun pauseAll(): Result<Unit> = withContext(Dispatchers.IO) {
         val activeIds = downloadsMutex.withLock {
             _downloadsList.filter { it.status is DownloadStatus.Downloading }.map { it.id }
         }
         activeIds.forEach { pauseDownload(it) }
-        return Result.success(Unit)
+        Result.success(Unit)
     }
 
-    override suspend fun resumeAll(): Result<Unit> {
+    override suspend fun resumeAll(): Result<Unit> = withContext(Dispatchers.IO) {
         val pausedIds = downloadsMutex.withLock {
             _downloadsList.filter { it.status is DownloadStatus.Paused }.map { it.id }
         }
         pausedIds.forEach { resumeDownload(it) }
-        return Result.success(Unit)
+        Result.success(Unit)
     }
 
-    override suspend fun cancelAll(): Result<Unit> {
-        // ✅ CRÍTICO: Obtener IDs primero, LUEGO cancelar sin lock
+    override suspend fun cancelAll(): Result<Unit> = withContext(Dispatchers.IO) {
         val activeIds = downloadsMutex.withLock {
             _downloadsList.filter { it.status.isActive }.map { it.id }
         }
         activeIds.forEach { cancelDownload(it) }
-        return Result.success(Unit)
+        Result.success(Unit)
     }
 
-    override suspend fun clearCompleted(): Result<Unit> = downloadsMutex.withLock {
-        _downloadsList.removeAll { it.status is DownloadStatus.Completed }
-        updateDownloadsFlow()
+    override suspend fun clearCompleted(): Result<Unit> = withContext(Dispatchers.IO) {
+        downloadsMutex.withLock {
+            _downloadsList.removeAll { it.status is DownloadStatus.Completed }
+            updateDownloadsFlow()
+        }
         repository.clearCompleted()
         Result.success(Unit)
     }
 
     // SECCIÓN 5: PRIORIDADES Y ORDENAMIENTO
 
-    override suspend fun changePriority(id: String, newPriority: Priority): Result<Unit> = downloadsMutex.withLock {
-        val index = _downloadsList.indexOfFirst { it.id == id }
-        if (index == -1) {
-            return Result.failure(Exception("Descarga no encontrada"))
+    override suspend fun changePriority(id: String, newPriority: Priority): Result<Unit> = withContext(Dispatchers.IO) {
+        downloadsMutex.withLock {
+            val index = _downloadsList.indexOfFirst { it.id == id }
+            if (index == -1) {
+                return@withContext Result.failure(Exception("Descarga no encontrada"))
+            }
+
+            val download = _downloadsList[index]
+            _downloadsList[index] = download.copy(priority = newPriority)
+            updateDownloadsFlow()
         }
 
-        val download = _downloadsList[index]
-        _downloadsList[index] = download.copy(priority = newPriority)
-        updateDownloadsFlow()
-        repository.updateDownload(_downloadsList[index])
+        // Actualizar repositorio sin lock
+        val updatedDownload = downloadsMutex.withLock {
+            _downloadsList.find { it.id == id }
+        }
+        updatedDownload?.let { repository.updateDownload(it) }
 
         Result.success(Unit)
     }
 
-    override suspend fun moveUp(id: String): Result<Unit> = downloadsMutex.withLock {
-        val index = _downloadsList.indexOfFirst { it.id == id }
-        if (index <= 0) {
-            return Result.failure(Exception("No se puede mover más arriba"))
-        }
+    override suspend fun moveUp(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+        downloadsMutex.withLock {
+            val index = _downloadsList.indexOfFirst { it.id == id }
+            if (index <= 0) {
+                return@withContext Result.failure(Exception("No se puede mover más arriba"))
+            }
 
-        // Intercambiar posiciones
-        val temp = _downloadsList[index]
-        _downloadsList[index] = _downloadsList[index - 1]
-        _downloadsList[index - 1] = temp
-        updateDownloadsFlow()
+            // Intercambiar posiciones
+            val temp = _downloadsList[index]
+            _downloadsList[index] = _downloadsList[index - 1]
+            _downloadsList[index - 1] = temp
+            updateDownloadsFlow()
+        }
 
         Result.success(Unit)
     }
 
-    override suspend fun moveDown(id: String): Result<Unit> = downloadsMutex.withLock {
-        val index = _downloadsList.indexOfFirst { it.id == id }
-        if (index == -1 || index >= _downloadsList.size - 1) {
-            return Result.failure(Exception("No se puede mover más abajo"))
-        }
+    override suspend fun moveDown(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+        downloadsMutex.withLock {
+            val index = _downloadsList.indexOfFirst { it.id == id }
+            if (index == -1 || index >= _downloadsList.size - 1) {
+                return@withContext Result.failure(Exception("No se puede mover más abajo"))
+            }
 
-        // Intercambiar posiciones
-        val temp = _downloadsList[index]
-        _downloadsList[index] = _downloadsList[index + 1]
-        _downloadsList[index + 1] = temp
-        updateDownloadsFlow()
+            // Intercambiar posiciones
+            val temp = _downloadsList[index]
+            _downloadsList[index] = _downloadsList[index + 1]
+            _downloadsList[index + 1] = temp
+            updateDownloadsFlow()
+        }
 
         Result.success(Unit)
     }
 
     // SECCIÓN 6: CONFIGURACIÓN
 
-    override suspend fun setMaxConcurrentDownloads(limit: Int): Result<Unit> {
+    override suspend fun setMaxConcurrentDownloads(limit: Int): Result<Unit> = withContext(Dispatchers.IO) {
         if (limit !in 1..10) {
-            return Result.failure(IllegalArgumentException("El límite debe estar entre 1 y 10"))
+            return@withContext Result.failure(IllegalArgumentException("El límite debe estar entre 1 y 10"))
         }
 
         _maxConcurrentDownloads.value = limit
         downloadSemaphore = Semaphore(limit)
 
-        // Re-procesar cola con el nuevo límite
-        scope.launch(Dispatchers.IO) {
-            processQueue()
-        }
+        // El init loop procesará automáticamente la cola con el nuevo límite
 
-        return Result.success(Unit)
+        Result.success(Unit)
     }
 
-    override suspend fun setGlobalSpeedLimit(bytesPerSecond: Long?): Result<Unit> {
+    override suspend fun setGlobalSpeedLimit(bytesPerSecond: Long?): Result<Unit> = withContext(Dispatchers.IO) {
         _globalSpeedLimit.value = bytesPerSecond
-        return Result.success(Unit)
+        Result.success(Unit)
     }
 
-    override suspend fun setDownloadSpeedLimit(id: String, bytesPerSecond: Long?): Result<Unit> = downloadsMutex.withLock {
-        val index = _downloadsList.indexOfFirst { it.id == id }
-        if (index == -1) {
-            return Result.failure(Exception("Descarga no encontrada"))
-        }
+    override suspend fun setDownloadSpeedLimit(id: String, bytesPerSecond: Long?): Result<Unit> = withContext(Dispatchers.IO) {
+        downloadsMutex.withLock {
+            val index = _downloadsList.indexOfFirst { it.id == id }
+            if (index == -1) {
+                return@withContext Result.failure(Exception("Descarga no encontrada"))
+            }
 
-        _downloadsList[index] = _downloadsList[index].copy(speedLimit = bytesPerSecond)
-        updateDownloadsFlow()
+            _downloadsList[index] = _downloadsList[index].copy(speedLimit = bytesPerSecond)
+            updateDownloadsFlow()
+        }
 
         Result.success(Unit)
     }
@@ -440,6 +452,7 @@ class DownloadManagerImpl(
             ).collect { progress ->
                 currentCoroutineContext().ensureActive()
 
+                // ✅ Actualizar estado INMEDIATAMENTE
                 updateDownloadStatus(
                     id,
                     DownloadStatus.Downloading(
@@ -449,8 +462,13 @@ class DownloadManagerImpl(
                     )
                 )
 
-                repository.savePartialData(id, progress.bytesDownloaded)
-                updateStatistics()
+                // ✅ Guardar progreso y estadísticas en paralelo (no bloquear el Flow)
+                scope.launch(Dispatchers.IO) {
+                    repository.savePartialData(id, progress.bytesDownloaded)
+                }
+                scope.launch(Dispatchers.IO) {
+                    updateStatistics()
+                }
             }
 
             // Descarga completada
@@ -489,16 +507,22 @@ class DownloadManagerImpl(
 
     /**
      * Actualiza el estado de una descarga específica (Thread-safe)
+     * ✅ OPTIMIZADO: Repository update FUERA del lock para reducir contención
      */
     private suspend fun updateDownloadStatus(id: String, newStatus: DownloadStatus) {
-        downloadsMutex.withLock {
+        val updatedDownload = downloadsMutex.withLock {
             val index = _downloadsList.indexOfFirst { it.id == id }
             if (index != -1) {
                 _downloadsList[index] = _downloadsList[index].copy(status = newStatus)
                 updateDownloadsFlow()
-                repository.updateDownload(_downloadsList[index])
+                _downloadsList[index]
+            } else {
+                null
             }
         }
+
+        // ✅ Actualizar repositorio FUERA del lock
+        updatedDownload?.let { repository.updateDownload(it) }
     }
 
     /**
@@ -515,36 +539,36 @@ class DownloadManagerImpl(
 
     /**
      * Actualiza las estadísticas globales
+     * ✅ OPTIMIZADO: Snapshot rápido con lock, cálculos fuera del lock
      */
     private suspend fun updateStatistics() {
-        downloadsMutex.withLock {
-            val stats = DownloadStatistics(
-                totalDownloads = _downloadsList.size,
-                activeDownloads = _downloadsList.count { it.status is DownloadStatus.Downloading },
-                queuedDownloads = _downloadsList.count { it.status is DownloadStatus.Queued },
-                pausedDownloads = _downloadsList.count { it.status is DownloadStatus.Paused },
-                completedDownloads = _downloadsList.count { it.status is DownloadStatus.Completed },
-                failedDownloads = _downloadsList.count { it.status is DownloadStatus.Failed },
-                totalBytesDownloaded = _downloadsList.sumOf { it.downloadedBytes },
-                currentGlobalSpeed = _downloadsList.sumOf { it.currentSpeed },
-                averageSpeed = calculateAverageSpeed()
-            )
-            _statistics.value = stats
+        // ✅ Lock MÍNIMO: solo para copiar lista
+        val snapshot = downloadsMutex.withLock {
+            _downloadsList.toList()
         }
-    }
 
-    /**
-     * Calcula la velocidad media de descargas activas
-     */
-    private fun calculateAverageSpeed(): Long {
-        val activeSpeeds = _downloadsList
+        // ✅ Cálculos FUERA del lock
+        val activeSpeeds = snapshot
             .filter { it.status is DownloadStatus.Downloading }
             .map { it.currentSpeed }
-        return if (activeSpeeds.isNotEmpty()) {
-            activeSpeeds.average().toLong()
-        } else {
-            0L
-        }
+
+        val stats = DownloadStatistics(
+            totalDownloads = snapshot.size,
+            activeDownloads = snapshot.count { it.status is DownloadStatus.Downloading },
+            queuedDownloads = snapshot.count { it.status is DownloadStatus.Queued },
+            pausedDownloads = snapshot.count { it.status is DownloadStatus.Paused },
+            completedDownloads = snapshot.count { it.status is DownloadStatus.Completed },
+            failedDownloads = snapshot.count { it.status is DownloadStatus.Failed },
+            totalBytesDownloaded = snapshot.sumOf { it.downloadedBytes },
+            currentGlobalSpeed = snapshot.sumOf { it.currentSpeed },
+            averageSpeed = if (activeSpeeds.isNotEmpty()) {
+                activeSpeeds.average().toLong()
+            } else {
+                0L
+            }
+        )
+
+        _statistics.value = stats
     }
 
     /**
@@ -572,8 +596,8 @@ class DownloadManagerImpl(
 
     // SECCIÓN 10: PERSISTENCIA Y CICLO DE VIDA
 
-    override suspend fun loadSavedDownloads(): Result<Unit> {
-        return try {
+    override suspend fun loadSavedDownloads(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
             val savedDownloads = repository.getAllDownloads().getOrNull() ?: emptyList()
             downloadsMutex.withLock {
                 _downloadsList.clear()
@@ -601,21 +625,24 @@ class DownloadManagerImpl(
         }
     }
 
-    override suspend fun shutdown(): Result<Unit> {
-        return try {
+    override suspend fun shutdown(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
             // Pausar todas las descargas activas
             pauseAll()
 
             // Guardar estado actual
-            downloadsMutex.withLock {
-                _downloadsList.forEach { download ->
-                    repository.updateDownload(download)
-                }
+            val downloads = downloadsMutex.withLock {
+                _downloadsList.toList()
+            }
+            downloads.forEach { download ->
+                repository.updateDownload(download)
             }
 
             // Cancelar todas las corrutinas
-            activeJobs.values.forEach { it.cancel() }
-            activeJobs.clear()
+            val jobs = downloadsMutex.withLock {
+                activeJobs.values.toList().also { activeJobs.clear() }
+            }
+            jobs.forEach { it.cancel() }
 
             Result.success(Unit)
         } catch (e: Exception) {
