@@ -177,13 +177,17 @@ class DownloadManagerImpl(
         Result.success(Unit)
     }
 
-    override suspend fun pauseDownload(id: String): Result<Unit> = downloadsMutex.withLock {
-        val download = _downloadsList.find { it.id == id }
-            ?: return Result.failure(Exception("Descarga no encontrada"))
+    override suspend fun pauseDownload(id: String): Result<Unit> {
+        // ✅ CRÍTICO: NO usar withLock aquí para evitar deadlock con updateDownloadStatus
+        val download = downloadsMutex.withLock {
+            _downloadsList.find { it.id == id }
+        } ?: return Result.failure(Exception("Descarga no encontrada"))
 
-        // Cancelar el job activo
-        activeJobs[id]?.cancel()
-        activeJobs.remove(id)
+        // Cancelar el job activo (sin lock)
+        val job = downloadsMutex.withLock {
+            activeJobs[id]?.also { activeJobs.remove(id) }
+        }
+        job?.cancel()
 
         // Actualizar estado a pausado
         when (val status = download.status) {
@@ -198,46 +202,54 @@ class DownloadManagerImpl(
             }
         }
 
-        Result.success(Unit)
+        return Result.success(Unit)
     }
 
     override suspend fun resumeDownload(id: String): Result<Unit> {
         return startDownload(id) // Reusar la lógica de inicio
     }
 
-    override suspend fun cancelDownload(id: String): Result<Unit> = downloadsMutex.withLock {
-        // Cancelar el job
-        activeJobs[id]?.cancel()
-        activeJobs.remove(id)
+    override suspend fun cancelDownload(id: String): Result<Unit> {
+        // ✅ CRÍTICO: NO usar withLock para evitar deadlock
+        val job = downloadsMutex.withLock {
+            activeJobs[id]?.also { activeJobs.remove(id) }
+        }
+        job?.cancel()
 
-        // Actualizar estado
+        // Actualizar estado (usa su propio lock internamente)
         updateDownloadStatus(id, DownloadStatus.Cancelled)
 
-        Result.success(Unit)
+        return Result.success(Unit)
     }
 
-    override suspend fun removeDownload(id: String): Result<Unit> = downloadsMutex.withLock {
-        // Cancelar si está activo
-        activeJobs[id]?.cancel()
-        activeJobs.remove(id)
+    override suspend fun removeDownload(id: String): Result<Unit> {
+        // ✅ CRÍTICO: Cancelar primero sin lock, luego actualizar con lock
+        val job = downloadsMutex.withLock {
+            activeJobs[id]?.also { activeJobs.remove(id) }
+        }
+        job?.cancel()
 
-        // Eliminar de la lista
-        _downloadsList.removeAll { it.id == id }
-        updateDownloadsFlow()
+        // Eliminar de la lista con lock
+        downloadsMutex.withLock {
+            _downloadsList.removeAll { it.id == id }
+            updateDownloadsFlow()
+        }
 
         // Eliminar del repositorio
         repository.deleteDownload(id)
 
-        Result.success(Unit)
+        return Result.success(Unit)
     }
 
     // SECCIÓN 4: CONTROL GLOBAL
 
-    override suspend fun pauseAll(): Result<Unit> = downloadsMutex.withLock {
-        _downloadsList.filter { it.status is DownloadStatus.Downloading }.forEach {
-            pauseDownload(it.id)
+    override suspend fun pauseAll(): Result<Unit> {
+        // ✅ CRÍTICO: Obtener IDs primero, LUEGO pausar sin lock
+        val activeIds = downloadsMutex.withLock {
+            _downloadsList.filter { it.status is DownloadStatus.Downloading }.map { it.id }
         }
-        Result.success(Unit)
+        activeIds.forEach { pauseDownload(it) }
+        return Result.success(Unit)
     }
 
     override suspend fun resumeAll(): Result<Unit> {
@@ -248,11 +260,13 @@ class DownloadManagerImpl(
         return Result.success(Unit)
     }
 
-    override suspend fun cancelAll(): Result<Unit> = downloadsMutex.withLock {
-        _downloadsList.filter { it.status.isActive }.forEach {
-            cancelDownload(it.id)
+    override suspend fun cancelAll(): Result<Unit> {
+        // ✅ CRÍTICO: Obtener IDs primero, LUEGO cancelar sin lock
+        val activeIds = downloadsMutex.withLock {
+            _downloadsList.filter { it.status.isActive }.map { it.id }
         }
-        Result.success(Unit)
+        activeIds.forEach { cancelDownload(it) }
+        return Result.success(Unit)
     }
 
     override suspend fun clearCompleted(): Result<Unit> = downloadsMutex.withLock {
@@ -404,6 +418,16 @@ class DownloadManagerImpl(
             val speedLimit = download.speedLimit ?: _globalSpeedLimit.value
             val fullPath = "$downloadPath/${download.fileName}"
             val fileWriter = fileWriterFactory.createFileWriter()
+
+            // ✅ CRÍTICO: Cambiar estado a Downloading INMEDIATAMENTE antes de empezar
+            updateDownloadStatus(
+                id,
+                DownloadStatus.Downloading(
+                    bytesDownloaded = startByte,
+                    totalBytes = 0L,
+                    speed = 0L
+                )
+            )
 
             // ✅ Agregar timeout global de 10 minutos para iniciar descarga
             withTimeout(600_000) {
