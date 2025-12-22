@@ -735,17 +735,16 @@ class DownloadManagerImpl(
             val index = _downloadsList.indexOfFirst { it.id == id }
             if (index != -1) {
                 _downloadsList[index] = _downloadsList[index].copy(status = newStatus)
-                updateDownloadsFlow()
+                // ✅ Actualizar StateFlow inmediatamente dentro del lock
+                _downloads.value = _downloadsList.toList()
                 _downloadsList[index]
             } else {
                 null
             }
         }
 
-        // ✅ Actualizar repositorio FUERA del lock (siempre si forcePersist es true)
+        // ✅ Actualizar repositorio FUERA del lock (solo si forcePersist)
         if (forcePersist) {
-            updatedDownload?.let { repository.updateDownload(it) }
-        } else {
             updatedDownload?.let { repository.updateDownload(it) }
         }
     }
