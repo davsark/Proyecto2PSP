@@ -26,16 +26,37 @@ class DownloadClient(private val httpClient: HttpClient) {
 
     suspend fun getFileMetadata(url: String): Result<DownloadMetadata> {
         return try {
-            val response = httpClient.head(url)
-            val contentLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: -1L
+            // ✅ USAR GET CON RANGE: 0-0 EN LUGAR DE HEAD
+            // Algunos servidores( y Ktor) pueden descargar el cuerpo entero con HEAD
+            // Usando Range garantizamos obtener solo el inicio y los headers correctos
+            val response = httpClient.get(url) {
+                header(HttpHeaders.Range, "bytes=0-0")
+            }
+            
+            // Si el servidor soporta rangos, devolverá 206 Partial Content
+            // y el header Content-Range: bytes 0-0/TOTAL
+            val contentRange = response.headers[HttpHeaders.ContentRange]
+            val supportsRange = response.status == HttpStatusCode.PartialContent
+            
+            var totalBytes = -1L
+            if (contentRange != null) {
+                // Parsear "bytes 0-0/12345" => 12345
+                val parts = contentRange.substringAfter("/").trim()
+                if (parts != "*" && parts.isNotEmpty()) {
+                    totalBytes = parts.toLongOrNull() ?: -1L
+                }
+            } else {
+                // Fallback a Content-Length si no hay Content-Range (servidor no soporta rangos o archivo pequeño)
+                totalBytes = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: -1L
+            }
+
             val mimeType = response.headers[HttpHeaders.ContentType]
-            val supportsRange = response.headers[HttpHeaders.AcceptRanges] == "bytes"
             val fileName = extractFileNameFromHeaders(response.headers, url)
             val lastModified = response.headers[HttpHeaders.LastModified]
 
             Result.success(
                 DownloadMetadata(
-                    totalBytes = contentLength,
+                    totalBytes = totalBytes,
                     mimeType = mimeType,
                     supportsRangeRequests = supportsRange,
                     serverFileName = fileName,
@@ -43,7 +64,27 @@ class DownloadClient(private val httpClient: HttpClient) {
                 )
             )
         } catch (e: Exception) {
-            Result.failure(e)
+            // Si falla el range request, intentar HEAD como fallback
+            try {
+                val response = httpClient.head(url)
+                val contentLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: -1L
+                val mimeType = response.headers[HttpHeaders.ContentType]
+                val supportsRange = response.headers[HttpHeaders.AcceptRanges] == "bytes"
+                val fileName = extractFileNameFromHeaders(response.headers, url)
+                val lastModified = response.headers[HttpHeaders.LastModified]
+                
+                Result.success(
+                    DownloadMetadata(
+                        totalBytes = contentLength,
+                        mimeType = mimeType,
+                        supportsRangeRequests = supportsRange,
+                        serverFileName = fileName,
+                        lastModified = lastModified
+                    )
+                )
+            } catch (headError: Exception) {
+                Result.failure(e)
+            }
         }
     }
 
@@ -128,13 +169,19 @@ class DownloadClient(private val httpClient: HttpClient) {
                     lastFlushTime = currentTime
                 }
 
-                // ✅ Emitir progreso cada 500ms O cada 1MB
+                // ✅ Emitir progreso
                 val timeDiff = currentTime - lastEmitTime
-                if (timeDiff >= 500 || bytesDownloadedSinceLastEmit >= 1024 * 1024) {
+                if (timeDiff >= 250 || bytesDownloadedSinceLastEmit >= 256 * 1024) {
                     currentSpeed = if (timeDiff > 0) {
                         (bytesDownloadedSinceLastEmit * 1000) / timeDiff
                     } else {
                         0L
+                    }
+
+                    // ✅ DEBUG: Verificar emisión
+                    if (totalBytes > 0) {
+                         val pct = (totalBytesDownloaded * 100 / totalBytes)
+                         println("📤 EMIT: ${totalBytesDownloaded}/${totalBytes} ($pct%)")
                     }
 
                     emit(

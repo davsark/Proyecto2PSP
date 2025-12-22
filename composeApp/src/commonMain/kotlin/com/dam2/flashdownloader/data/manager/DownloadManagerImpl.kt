@@ -571,6 +571,16 @@ class DownloadManagerImpl(
                 var lastProgressTime = System.currentTimeMillis()
                 var lastProgressBytes = startByte
 
+                // ✅ CRÍTICO: Cambiar estado a Downloading ANTES de empezar
+                updateDownloadStatus(
+                    id,
+                    DownloadStatus.Downloading(
+                        bytesDownloaded = startByte,
+                        totalBytes = metadata.totalBytes,
+                        speed = 0L
+                    )
+                )
+
                 // ✅ FIX CRÍTICO: Descargar SIN Token Bucket (se maneja en DownloadClient)
                 downloadClient.downloadFile(
                     url = download.url,
@@ -578,8 +588,14 @@ class DownloadManagerImpl(
                     startByte = startByte,
                     speedLimitBytesPerSecond = speedLimit, // Pasarlo al cliente
                     fileWriter = fileWriter
-                ).collect { progress ->
+                )
+                .buffer(0)  // ✅ Sin buffering - emisión inmediata
+                .collect { progress ->
                     currentCoroutineContext().ensureActive()
+
+                    // ✅ DEBUG: Verificar que collect recibe las emisiones
+                    val percentage = if (progress.totalBytes > 0) (progress.bytesDownloaded * 100 / progress.totalBytes) else 0
+                    println("📥 COLLECT: ${progress.bytesDownloaded}/${progress.totalBytes} ($percentage%)")
 
                     // ✅ FIX: Calcular velocidad real
                     val currentTime = System.currentTimeMillis()
@@ -599,6 +615,12 @@ class DownloadManagerImpl(
                     // Actualizar tracker
                     bytesTracker[id] = progress.bytesDownloaded
                     speedTracker[id] = currentSpeed
+
+                    // ✅ DEBUG: Verificar recepción de progreso
+                    if (progress.totalBytes > 0) {
+                         val pct = (progress.bytesDownloaded * 100 / progress.totalBytes)
+                         println("⚡ COLLECT: $id - ${progress.bytesDownloaded}/${progress.totalBytes} ($pct%)")
+                    }
 
                     // ✅ Actualizar estado con velocidad correcta
                     updateDownloadStatus(
@@ -735,13 +757,14 @@ class DownloadManagerImpl(
             val index = _downloadsList.indexOfFirst { it.id == id }
             if (index != -1) {
                 _downloadsList[index] = _downloadsList[index].copy(status = newStatus)
-                // ✅ Actualizar StateFlow inmediatamente dentro del lock
-                _downloads.value = _downloadsList.toList()
                 _downloadsList[index]
             } else {
                 null
             }
         }
+        
+        // ✅ CRÍTICO: Usar update{} para forzar recomposición en Compose
+        _downloads.update { downloadsMutex.withLock { _downloadsList.toList() } }
 
         // ✅ Actualizar repositorio FUERA del lock (solo si forcePersist)
         if (forcePersist) {
@@ -753,9 +776,8 @@ class DownloadManagerImpl(
      * Actualiza el StateFlow de descargas
      */
     private fun updateDownloadsFlow() {
-        // ✅ USAR EL ORDEN DE LA LISTA (Manual)
-        // Ya no ordenamos forzosamente aquí para respetar el reordenamiento manual
-        _downloads.value = _downloadsList.toList()
+        // ✅ Usar update{} para mejor reactividad
+        _downloads.update { _downloadsList.toList() }
     }
 
     /**

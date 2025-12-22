@@ -27,7 +27,7 @@ class DownloadViewModel(
     val downloads: StateFlow<List<DownloadItem>> = downloadManager.downloads
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,  // ✅ CRÍTICO: Siempre activo para actualizaciones en tiempo real
             initialValue = emptyList()
         )
 
