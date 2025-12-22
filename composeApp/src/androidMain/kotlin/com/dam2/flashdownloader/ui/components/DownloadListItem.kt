@@ -35,7 +35,8 @@ fun DownloadListItem(
     onRemove: () -> Unit,
     onRetry: () -> Unit,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dragHandleModifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -57,6 +58,16 @@ fun DownloadListItem(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
             ) {
+                // Drag Handle
+                Icon(
+                    imageVector = Icons.Default.DragIndicator,
+                    contentDescription = "Reordenar",
+                    modifier = dragHandleModifier
+                        .size(24.dp)
+                        .padding(end = 4.dp, top = 12.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+
                 // Icono de categoría
                 Box(
                     modifier = Modifier
@@ -160,20 +171,33 @@ fun DownloadListItem(
             // Progreso y detalles
             when (val status = download.status) {
                 is DownloadStatus.Downloading, is DownloadStatus.Paused -> {
-                    LinearProgressIndicator(
-                        progress = {
-                            when (status) {
-                                is DownloadStatus.Downloading -> status.progress
-                                is DownloadStatus.Paused -> status.progress
-                                else -> 0f
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = getStatusColor(status),
-                    )
+                    // Barra de progreso
+                    if (status is DownloadStatus.Downloading && status.totalBytes <= 0) {
+                        // Indeterminado
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = getStatusColor(status),
+                        )
+                    } else {
+                        // Determinado
+                        LinearProgressIndicator(
+                            progress = {
+                                when (status) {
+                                    is DownloadStatus.Downloading -> status.progress
+                                    is DownloadStatus.Paused -> status.progress
+                                    else -> 0f
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = getStatusColor(status),
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -186,13 +210,14 @@ fun DownloadListItem(
                         Column {
                             Text(
                                 text = when (status) {
-                                    is DownloadStatus.Downloading -> "${status.progressPercentage}%"
+                                    is DownloadStatus.Downloading -> if(status.totalBytes > 0) "${status.progressPercentage}%" else "Cargando..."
                                     is DownloadStatus.Paused -> "${status.progressPercentage}% (Pausado)"
                                     else -> "0%"
                                 },
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium
                             )
+
                             if (status is DownloadStatus.Downloading && status.speed > 0) {
                                 Text(
                                     text = status.speed.formatSpeed(),
@@ -204,7 +229,10 @@ fun DownloadListItem(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "${download.downloadedBytes.formatBytes()} / ${download.totalSize.formatBytes()}",
+                                text = if (download.totalSize > 0) 
+                                    "${download.downloadedBytes.formatBytes()} / ${download.totalSize.formatBytes()}"
+                                else 
+                                    "Descargado: ${download.downloadedBytes.formatBytes()}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -231,7 +259,7 @@ fun DownloadListItem(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Completado - ${status.totalBytes.formatBytes()}",
+                            text = "Completado - ${download.totalSize.formatBytes()}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = DownloadColors.Completed
                         )

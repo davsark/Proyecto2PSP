@@ -18,6 +18,11 @@ interface DownloadRepository {
     suspend fun updateDownload(download: DownloadItem): Result<Unit>
 
     /**
+     * Actualiza todas las descargas (útil para reordenamiento masivo)
+     */
+    suspend fun updateAll(downloads: List<DownloadItem>): Result<Unit>
+
+    /**
      * Elimina una descarga del almacenamiento
      */
     suspend fun deleteDownload(id: String): Result<Unit>

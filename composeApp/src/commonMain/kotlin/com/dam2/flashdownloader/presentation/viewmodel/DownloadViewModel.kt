@@ -359,6 +359,25 @@ class DownloadViewModel(
         }
     }
 
+    fun moveDownload(fromIndex: Int, toIndex: Int) {
+        val currentFiltered = filteredDownloads.value
+        // Validar índices en la lista filtrada (lo que ve el usuario)
+        if (fromIndex in currentFiltered.indices && toIndex in currentFiltered.indices) {
+            val fromItem = currentFiltered[fromIndex]
+            val toItem = currentFiltered[toIndex]
+            
+            // Obtener lista completa actual para calcular índices reales
+            val fullList = downloads.value
+            val realToIndex = fullList.indexOfFirst { it.id == toItem.id }
+            
+            if (realToIndex != -1) {
+                viewModelScope.launch {
+                    downloadManager.moveDownloadToPosition(fromItem.id, realToIndex)
+                }
+            }
+        }
+    }
+
     // SECCIÓN 6: CONFIGURACIÓN
 
     /**

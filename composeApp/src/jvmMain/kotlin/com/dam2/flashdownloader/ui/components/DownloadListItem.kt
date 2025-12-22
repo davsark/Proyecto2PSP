@@ -37,7 +37,8 @@ fun DownloadListItem(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dragHandleModifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
@@ -58,6 +59,17 @@ fun DownloadListItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Drag Handle (si se proporciona modificador)
+                // Solo mostrar si es activo
+                Icon(
+                    imageVector = Icons.Default.DragIndicator,
+                    contentDescription = "Reordenar",
+                    modifier = dragHandleModifier
+                        .size(24.dp)
+                        .padding(end = 8.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+
                 // Icono de categoría
                 Box(
                     modifier = Modifier

@@ -134,6 +134,11 @@ interface DownloadManager {
     suspend fun clearCompleted(): Result<Unit>
 
     /**
+     * Mueve una descarga a una posición específica en la lista
+     */
+    suspend fun moveDownloadToPosition(id: String, newIndex: Int): Result<Unit>
+
+    /**
      * Reintenta una descarga fallida
      */
     suspend fun retryDownload(id: String): Result<Unit>

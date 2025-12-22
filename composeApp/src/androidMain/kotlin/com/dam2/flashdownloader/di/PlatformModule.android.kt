@@ -47,7 +47,7 @@ actual fun platformModule(): Module = module {
 
     // FileWriterFactory
     single<FileWriterFactory> {
-        AndroidFileWriterFactory()
+        AndroidFileWriterFactory(get())
     }
 
     // ClipboardManager

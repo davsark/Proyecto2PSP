@@ -49,6 +49,17 @@ class DownloadRepositoryImpl(
         }
     }
 
+    override suspend fun updateAll(downloads: List<DownloadItem>): Result<Unit> = mutex.withLock {
+        return try {
+            // Convierte toda la lista a serializable y guarda
+            val serializableList = downloads.map { it.toSerializable() }
+            storage.saveDownloads(json.encodeToString(serializableList))
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun deleteDownload(id: String): Result<Unit> = mutex.withLock {
         return try {
             val downloads = loadAllDownloadsInternal().toMutableList()
@@ -148,7 +159,10 @@ private data class SerializableDownloadItem(
 @Serializable
 private sealed class SerializableDownloadStatus {
     @Serializable
-    data object Queued : SerializableDownloadStatus()
+    data class Queued(
+        val bytesDownloaded: Long = 0L,
+        val totalBytes: Long = -1L
+    ) : SerializableDownloadStatus()
 
     @Serializable
     data class Downloading(
@@ -194,7 +208,7 @@ private fun DownloadItem.toSerializable() = SerializableDownloadItem(
 )
 
 private fun DownloadStatus.toSerializable(): SerializableDownloadStatus = when (this) {
-    is DownloadStatus.Queued -> SerializableDownloadStatus.Queued
+    is DownloadStatus.Queued -> SerializableDownloadStatus.Queued(bytesDownloaded, totalBytes)
     is DownloadStatus.Downloading -> SerializableDownloadStatus.Downloading(bytesDownloaded, totalBytes)
     is DownloadStatus.Paused -> SerializableDownloadStatus.Paused(bytesDownloaded, totalBytes)
     is DownloadStatus.Completed -> SerializableDownloadStatus.Completed(filePath, totalBytes)
@@ -217,8 +231,10 @@ private fun SerializableDownloadItem.toDomain() = DownloadItem(
 )
 
 private fun SerializableDownloadStatus.toDomain(): DownloadStatus = when (this) {
-    is SerializableDownloadStatus.Queued -> DownloadStatus.Queued
-    is SerializableDownloadStatus.Downloading -> DownloadStatus.Downloading(bytesDownloaded, totalBytes)
+    is SerializableDownloadStatus.Queued -> DownloadStatus.Queued(bytesDownloaded, totalBytes)
+    is SerializableDownloadStatus.Downloading -> {
+        DownloadStatus.Downloading(bytesDownloaded, totalBytes, 0L)
+    }
     is SerializableDownloadStatus.Paused -> DownloadStatus.Paused(bytesDownloaded, totalBytes)
     is SerializableDownloadStatus.Completed -> DownloadStatus.Completed(filePath, totalBytes)
     is SerializableDownloadStatus.Failed -> DownloadStatus.Failed(error, bytesDownloaded)

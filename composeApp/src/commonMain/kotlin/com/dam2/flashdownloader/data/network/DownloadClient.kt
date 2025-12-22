@@ -14,22 +14,16 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * Cliente de red para realizar descargas HTTP
- * Soporta descargas parciales (range requests) para reanudar descargas
+ * ✅ OPTIMIZADO para archivos grandes
  */
 class DownloadClient(private val httpClient: HttpClient) {
 
-    /**
-     * Resultado del progreso de descarga
-     */
     data class DownloadProgress(
         val bytesDownloaded: Long,
         val totalBytes: Long,
         val speed: Long
     )
 
-    /**
-     * Obtiene metadata del archivo sin descargarlo (HEAD request)
-     */
     suspend fun getFileMetadata(url: String): Result<DownloadMetadata> {
         return try {
             val response = httpClient.head(url)
@@ -53,14 +47,6 @@ class DownloadClient(private val httpClient: HttpClient) {
         }
     }
 
-    /**
-     * Descarga un archivo emitiendo progreso mediante Flow
-     * @param url URL del archivo a descargar
-     * @param outputPath Ruta donde guardar el archivo
-     * @param startByte Byte desde donde iniciar (para reanudar descargas)
-     * @param speedLimitBytesPerSecond Límite de velocidad en bytes/segundo (null = sin límite)
-     * @param fileWriter Función para escribir los datos descargados
-     */
     fun downloadFile(
         url: String,
         outputPath: String,
@@ -72,6 +58,10 @@ class DownloadClient(private val httpClient: HttpClient) {
         var lastEmitTime = System.currentTimeMillis()
         var bytesDownloadedSinceLastEmit = 0L
         var currentSpeed = 0L
+
+        // ✅ FIX: Token Bucket para límite de velocidad
+        var tokenBucket = 0.0
+        var lastTokenRefill = System.currentTimeMillis()
 
         try {
             val response = httpClient.prepareGet(url) {
@@ -88,29 +78,51 @@ class DownloadClient(private val httpClient: HttpClient) {
             }
 
             val channel: ByteReadChannel = response.bodyAsChannel()
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            
+            // ✅ FIX: Buffer GRANDE para archivos grandes (1MB)
+            val buffer = ByteArray(LARGE_BUFFER_SIZE)
 
-            // Inicializar el archivo para escritura
             fileWriter.openForWrite(outputPath, startByte > 0)
 
             while (!channel.isClosedForRead && coroutineContext.isActive) {
                 val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
                 if (bytesRead <= 0) break
 
+                // ✅ FIX: Aplicar límite de velocidad CORRECTAMENTE
+                if (speedLimitBytesPerSecond != null && speedLimitBytesPerSecond > 0) {
+                    val currentTime = System.currentTimeMillis()
+                    val timeDelta = (currentTime - lastTokenRefill) / 1000.0
+
+                    // Rellenar tokens
+                    tokenBucket += timeDelta * speedLimitBytesPerSecond
+                    if (tokenBucket > speedLimitBytesPerSecond.toDouble()) {
+                        tokenBucket = speedLimitBytesPerSecond.toDouble()
+                    }
+                    lastTokenRefill = currentTime
+
+                    // Consumir tokens
+                    tokenBucket -= bytesRead
+
+                    // Si no hay tokens, esperar
+                    if (tokenBucket < 0) {
+                        val deficit = -tokenBucket
+                        val delayMs = ((deficit / speedLimitBytesPerSecond) * 1000).toLong()
+                        if (delayMs > 0) {
+                            delay(delayMs)
+                        }
+                        tokenBucket = 0.0
+                    }
+                }
+
                 // Escribir datos
                 fileWriter.write(buffer, 0, bytesRead)
                 totalBytesDownloaded += bytesRead
                 bytesDownloadedSinceLastEmit += bytesRead
 
-                // Aplicar límite de velocidad si está configurado
-                if (speedLimitBytesPerSecond != null && speedLimitBytesPerSecond > 0) {
-                    applySpeedLimit(bytesRead.toLong(), speedLimitBytesPerSecond)
-                }
-
-                // Emitir progreso cada 500ms para no saturar la UI
+                // ✅ FIX: Emitir progreso cada 200ms (más frecuente)
                 val currentTime = System.currentTimeMillis()
                 val timeDiff = currentTime - lastEmitTime
-                if (timeDiff >= 500) {
+                if (timeDiff >= 200) {
                     currentSpeed = if (timeDiff > 0) {
                         (bytesDownloadedSinceLastEmit * 1000) / timeDiff
                     } else {
@@ -139,29 +151,15 @@ class DownloadClient(private val httpClient: HttpClient) {
                 )
             )
 
-        } finally {
-            // ✅ SIEMPRE cerrar el archivo, incluso si hay errores
-            try {
-                fileWriter.close()
-            } catch (e: Exception) {
-                // Ignorar errores al cerrar
-            }
+            fileWriter.close()
+
+        } catch (e: Exception) {
+            fileWriter.close()
+            throw e
         }
     }
 
-    /**
-     * Aplica un límite de velocidad mediante delay calculado
-     */
-    private suspend fun applySpeedLimit(bytesRead: Long, limitBytesPerSecond: Long) {
-        val idealTimeMs = (bytesRead * 1000) / limitBytesPerSecond
-        delay(idealTimeMs)
-    }
-
-    /**
-     * Extrae el nombre del archivo desde los headers de respuesta o la URL
-     */
     private fun extractFileNameFromHeaders(headers: Headers, url: String): String {
-        // Intentar obtener desde Content-Disposition
         val contentDisposition = headers[HttpHeaders.ContentDisposition]
         if (contentDisposition != null) {
             val fileNameMatch = Regex("filename=\"?([^\"]+)\"?").find(contentDisposition)
@@ -169,34 +167,18 @@ class DownloadClient(private val httpClient: HttpClient) {
                 return fileNameMatch.groupValues[1]
             }
         }
-
-        // Si no, extraer de la URL
         return url.substringAfterLast('/').substringBefore('?').ifEmpty { "download" }
     }
 
     companion object {
-        private const val DEFAULT_BUFFER_SIZE = 8192
+        // ✅ FIX: Buffer de 1MB para archivos grandes
+        private const val LARGE_BUFFER_SIZE = 1024 * 1024 // 1MB
     }
 }
 
-/**
- * Interfaz para escritura de archivos específica de plataforma
- */
 interface FileWriter {
-    /**
-     * Abre el archivo para escritura
-     * @param path Ruta del archivo
-     * @param append Si es true, abre en modo append (para reanudar descargas)
-     */
     fun openForWrite(path: String, append: Boolean)
-
-    /**
-     * Escribe bytes al archivo
-     */
     fun write(buffer: ByteArray, offset: Int, length: Int)
-
-    /**
-     * Cierra el archivo
-     */
     fun close()
+    fun delete(path: String): Boolean
 }

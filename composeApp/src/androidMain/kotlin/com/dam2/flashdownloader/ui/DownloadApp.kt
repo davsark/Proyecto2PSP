@@ -20,6 +20,8 @@ import com.dam2.flashdownloader.ui.components.StatisticsCard
 import com.dam2.flashdownloader.ui.dialogs.AddDownloadBottomSheet
 import com.dam2.flashdownloader.ui.dialogs.SettingsBottomSheet
 import com.dam2.flashdownloader.ui.theme.FlashDownloaderTheme
+import com.dam2.flashdownloader.ui.utils.rememberDragDropState
+import com.dam2.flashdownloader.ui.utils.dragGestureHandler
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -71,6 +73,12 @@ fun DownloadApp(
                 }
             }
         }
+    }
+
+    // Drag Drop State
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val dragDropState = rememberDragDropState(listState) { from, to ->
+        viewModel.moveDownload(from, to)
     }
 
     FlashDownloaderTheme(darkTheme = isDarkTheme) {
@@ -252,7 +260,10 @@ fun DownloadApp(
                     )
                 } else {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .dragGestureHandler(dragDropState),
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
                         items(
@@ -266,7 +277,8 @@ fun DownloadApp(
                                 onCancel = { viewModel.cancelDownload(download.id) },
                                 onRemove = { viewModel.removeDownload(download.id) },
                                 onRetry = { viewModel.retryDownload(download.id) },
-                                onClick = { viewModel.showDownloadDetails(download.id) }
+                                onClick = { viewModel.showDownloadDetails(download.id) },
+                                dragHandleModifier = if (uiState.searchQuery.isEmpty()) Modifier else Modifier
                             )
                         }
                     }

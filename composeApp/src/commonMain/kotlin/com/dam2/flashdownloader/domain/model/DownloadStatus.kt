@@ -7,7 +7,18 @@ sealed class DownloadStatus {
     /**
      * La descarga está en cola esperando su turno
      */
-    data object Queued : DownloadStatus()
+    /**
+     * La descarga está en cola esperando su turno
+     * @param bytesDownloaded Bytes descargados hasta el momento (para resumir)
+     * @param totalBytes Total de bytes (si se conoce)
+     */
+    data class Queued(
+        val bytesDownloaded: Long = 0L,
+        val totalBytes: Long = -1L
+    ) : DownloadStatus() {
+        val progress: Float
+            get() = if (totalBytes > 0) (bytesDownloaded.toFloat() / totalBytes.toFloat()) else 0f
+    }
 
     /**
      * La descarga está actualmente en progreso
@@ -57,10 +68,12 @@ sealed class DownloadStatus {
      * La descarga ha sido completada exitosamente
      * @param filePath Ruta donde se guardó el archivo
      * @param totalBytes Tamaño total del archivo
+     * @param calculatedHash Hash SHA-256 del archivo (opcional)
      */
     data class Completed(
         val filePath: String,
-        val totalBytes: Long
+        val totalBytes: Long,
+        val calculatedHash: String? = null
     ) : DownloadStatus()
 
     /**

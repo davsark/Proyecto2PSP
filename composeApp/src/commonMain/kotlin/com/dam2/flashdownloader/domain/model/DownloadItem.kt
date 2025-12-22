@@ -24,6 +24,7 @@ data class DownloadItem(
             is DownloadStatus.Downloading -> status.totalBytes
             is DownloadStatus.Paused -> status.totalBytes
             is DownloadStatus.Completed -> status.totalBytes
+            is DownloadStatus.Queued -> status.totalBytes
             else -> metadata.totalBytes
         }
 
@@ -36,6 +37,7 @@ data class DownloadItem(
             is DownloadStatus.Paused -> status.bytesDownloaded
             is DownloadStatus.Failed -> status.bytesDownloaded
             is DownloadStatus.Completed -> status.totalBytes
+            is DownloadStatus.Queued -> status.bytesDownloaded
             else -> 0L
         }
 

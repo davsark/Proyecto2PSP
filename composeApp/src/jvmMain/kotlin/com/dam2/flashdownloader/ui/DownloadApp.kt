@@ -19,6 +19,8 @@ import com.dam2.flashdownloader.ui.components.TopBar
 import com.dam2.flashdownloader.ui.dialogs.AddDownloadDialog
 import com.dam2.flashdownloader.ui.dialogs.SettingsDialog
 import com.dam2.flashdownloader.ui.theme.FlashDownloaderTheme
+import com.dam2.flashdownloader.ui.utils.rememberDragDropState
+import com.dam2.flashdownloader.ui.utils.dragGestureHandler
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -68,6 +70,12 @@ fun DownloadApp(
 
     // Estado de navegación
     var selectedNavItem by remember { mutableStateOf(0) }
+    
+    // Estado de Drag & Drop
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val dragDropState = rememberDragDropState(listState) { from, to ->
+        viewModel.moveDownload(from, to)
+    }
 
     FlashDownloaderTheme(darkTheme = isDarkTheme) {
         Scaffold(
@@ -170,7 +178,10 @@ fun DownloadApp(
                         )
                     } else {
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .dragGestureHandler(dragDropState),
                             contentPadding = PaddingValues(vertical = 8.dp)
                         ) {
                             items(
@@ -186,7 +197,8 @@ fun DownloadApp(
                                     onRetry = { viewModel.retryDownload(download.id) },
                                     onMoveUp = { viewModel.moveDownloadUp(download.id) },
                                     onMoveDown = { viewModel.moveDownloadDown(download.id) },
-                                    onClick = { viewModel.showDownloadDetails(download.id) }
+                                    onClick = { viewModel.showDownloadDetails(download.id) },
+                                    dragHandleModifier = if (uiState.searchQuery.isEmpty()) Modifier else Modifier
                                 )
                             }
                         }
