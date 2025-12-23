@@ -26,6 +26,8 @@ fun AddDownloadBottomSheet(
     onCategoryChange: (Category?) -> Unit,
     priority: Priority,
     onPriorityChange: (Priority) -> Unit,
+    hash: String,
+    onHashChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     onPasteFromClipboard: () -> Unit
@@ -151,6 +153,22 @@ fun AddDownloadBottomSheet(
                     }
                 }
             }
+
+            // Hash SHA-256 (opcional)
+            OutlinedTextField(
+                value = hash,
+                onValueChange = onHashChange,
+                label = { Text("Hash SHA-256 (opcional)") },
+                placeholder = { Text("Para verificar integridad") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                supportingText = {
+                    Text(
+                        text = "Opcional: Hash para verificar que el archivo descargado es correcto",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            )
 
             // Botones
             Row(

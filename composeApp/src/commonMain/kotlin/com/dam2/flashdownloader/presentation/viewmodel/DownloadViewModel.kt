@@ -141,7 +141,8 @@ class DownloadViewModel(
         fileName: String? = null,
         category: Category? = null,
         priority: Priority = Priority.MEDIUM,
-        speedLimit: Long? = null
+        speedLimit: Long? = null,
+        hash: String? = null
     ) {
         viewModelScope.launch {
             if (!url.isValidUrl()) {
@@ -151,7 +152,7 @@ class DownloadViewModel(
 
             _uiState.update { it.copy(isLoading = true) }
 
-            downloadManager.addDownload(url, fileName, category, priority, speedLimit)
+            downloadManager.addDownload(url, fileName, category, priority, speedLimit, hash)
                 .onSuccess { id ->
                     emitEvent(UiEvent.Success("Descarga añadida correctamente"))
                     dismissAddDownloadDialog()
@@ -454,7 +455,8 @@ class DownloadViewModel(
                 addDownloadUrl = "",
                 addDownloadFileName = "",
                 addDownloadCategory = null,
-                addDownloadPriority = Priority.MEDIUM
+                addDownloadPriority = Priority.MEDIUM,
+                addDownloadHash = "" // ✅ Limpiar hash también
             )
         }
     }
@@ -485,6 +487,13 @@ class DownloadViewModel(
      */
     fun updateAddDownloadPriority(priority: Priority) {
         _uiState.update { it.copy(addDownloadPriority = priority) }
+    }
+
+    /**
+     * Actualiza el hash del diálogo
+     */
+    fun updateAddDownloadHash(hash: String) {
+        _uiState.update { it.copy(addDownloadHash = hash) }
     }
 
     /**
@@ -639,6 +648,7 @@ data class DownloadUiState(
     val addDownloadFileName: String = "",
     val addDownloadCategory: Category? = null,
     val addDownloadPriority: Priority = Priority.MEDIUM,
+    val addDownloadHash: String = "", // ✅ Hash SHA-256 opcional para verificación
     val selectedCategoryFilter: Category? = null,
     val selectedStatusFilter: DownloadStatusFilter? = null,
     val searchQuery: String = "",

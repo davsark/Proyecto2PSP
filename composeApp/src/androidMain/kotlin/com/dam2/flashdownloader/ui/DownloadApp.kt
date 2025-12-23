@@ -300,12 +300,15 @@ fun DownloadApp(
                     onCategoryChange = viewModel::updateAddDownloadCategory,
                     priority = uiState.addDownloadPriority,
                     onPriorityChange = viewModel::updateAddDownloadPriority,
+                    hash = uiState.addDownloadHash,
+                    onHashChange = viewModel::updateAddDownloadHash,
                     onConfirm = {
                         viewModel.addDownload(
                             url = uiState.addDownloadUrl,
                             fileName = uiState.addDownloadFileName.ifBlank { null },
                             category = uiState.addDownloadCategory,
-                            priority = uiState.addDownloadPriority
+                            priority = uiState.addDownloadPriority,
+                            hash = uiState.addDownloadHash.ifBlank { null }
                         )
                     },
                     onDismiss = viewModel::dismissAddDownloadDialog,

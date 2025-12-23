@@ -26,6 +26,8 @@ fun AddDownloadDialog(
     onCategoryChange: (Category?) -> Unit,
     priority: Priority,
     onPriorityChange: (Priority) -> Unit,
+    hash: String,
+    onHashChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     onPasteFromClipboard: () -> Unit
@@ -154,6 +156,17 @@ fun AddDownloadDialog(
                         }
                     }
                 }
+
+                // Hash SHA-256 (opcional)
+                OutlinedTextField(
+                    value = hash,
+                    onValueChange = onHashChange,
+                    label = { Text("Hash SHA-256 (opcional)") },
+                    placeholder = { Text("Para verificar integridad") },
+                    modifier = Modifier.fillMaxWidth(),
+                    supportingText = { Text("Opcional: Hash para verificar que el archivo descargado es correcto") },
+                    singleLine = true
+                )
 
                 Divider()
 
