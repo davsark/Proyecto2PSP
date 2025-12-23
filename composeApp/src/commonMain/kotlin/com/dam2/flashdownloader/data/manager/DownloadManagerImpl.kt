@@ -258,6 +258,8 @@ class DownloadManagerImpl(
                         elapsedSeconds = totalElapsed // ✅ Guardar tiempo acumulado
                     )
                 )
+                // ✅ CRÍTICO: Guardar progreso inmediatamente al pausar para evitar reinicios
+                repository.savePartialData(id, status.bytesDownloaded)
                 println("🔵 PAUSADO: elapsedSeconds guardado = $totalElapsed")
             }
             else -> {
@@ -616,8 +618,22 @@ class DownloadManagerImpl(
                     }
                 }
 
-                // Verificar progreso guardado
+                // Verificar progreso guardado (Repositorio vs Memoria)
                 var startByte = repository.getPartialData(id).getOrNull() ?: 0L
+                
+                // ✅ FIX: Si el estado en memoria tiene más progreso (reciente), usarlo
+                if (download.status is DownloadStatus.Paused) {
+                    val statusBytes = (download.status as DownloadStatus.Paused).bytesDownloaded
+                    if (statusBytes > startByte) {
+                        println("⚠️ Using memory bytes ($statusBytes) over repo bytes ($startByte)")
+                        startByte = statusBytes
+                    }
+                } else if (download.status is DownloadStatus.Queued) {
+                    val statusBytes = (download.status as DownloadStatus.Queued).bytesDownloaded
+                    if (statusBytes > startByte) {
+                        startByte = statusBytes
+                    }
+                }
 
                 // Validar soporte de reanudación
                 if (startByte > 0) {

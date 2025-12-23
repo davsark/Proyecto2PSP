@@ -70,9 +70,12 @@ class DownloadService : Service() {
                 previousDownloads = downloads
                 
                 val activeDownloads = downloads.filter { it.status is DownloadStatus.Downloading }
+                val queuedDownloads = downloads.filter { it.status is DownloadStatus.Queued }
+                val pausedDownloads = downloads.filter { it.status is DownloadStatus.Paused }
                 
-                if (activeDownloads.isEmpty() && downloads.none { it.status is DownloadStatus.Queued }) {
-                    // Stop service if no active or queued downloads
+                // Mantener servicio si hay descargas activas, en cola O pausadas
+                if (activeDownloads.isEmpty() && queuedDownloads.isEmpty() && pausedDownloads.isEmpty()) {
+                    // Stop service if no active, queued or paused downloads
                     stopSelf()
                 } else {
                     // Update notification
@@ -84,7 +87,7 @@ class DownloadService : Service() {
                          if (d.totalSize > 0) ((d.downloadedBytes.toFloat() / d.totalSize) * 100).toInt() else 0
                     } else 0
                     
-                    updateNotification(count, activeDownloads.size, totalSpeed, progress)
+                    updateNotification(count, queuedDownloads.size + pausedDownloads.size, totalSpeed, progress)
                     
                     // Keep WakeLock held
                     if (wakeLock?.isHeld == false) {
@@ -95,7 +98,7 @@ class DownloadService : Service() {
             .launchIn(scope)
     }
 
-    private fun createNotification(activeCount: Int, queueCount: Int, totalSpeed: Long, progress: Int = 0): android.app.Notification {
+    private fun createNotification(activeCount: Int, pausedOrQueuedCount: Int, totalSpeed: Long, progress: Int = 0): android.app.Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -104,35 +107,28 @@ class DownloadService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val contentText = if (activeCount > 0) {
-            "Descargando $activeCount archivo(s) a ${totalSpeed.formatSpeed()}"
+        val contentText = StringBuilder()
+        if (activeCount > 0) {
+            contentText.append("Descargando $activeCount a ${totalSpeed.formatSpeed()}")
+            if (pausedOrQueuedCount > 0) contentText.append(" • $pausedOrQueuedCount en espera")
+        } else if (pausedOrQueuedCount > 0) {
+            contentText.append("Descargas pausadas o en cola")
         } else {
-            "Descargas en cola o finalizando..."
+            contentText.append("Finalizando...")
         }
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Flash Downloader")
-            .setContentText(contentText)
+            .setContentText(contentText.toString())
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentIntent(pendingIntent)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             
-        // Añadir acciones de Pausar/Reanudar
-        if (activeCount > 0) {
-            val pauseIntent = Intent(this, DownloadService::class.java).apply {
-                action = ACTION_PAUSE_ALL
-            }
-            val pausePendingIntent = PendingIntent.getService(
-                this, 1, pauseIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            )
-            builder.addAction(
-                android.R.drawable.ic_media_pause,
-                "Pausar",
-                pausePendingIntent
-            )
-        } else if (queueCount > 0) {
+        // NOTA: Botón de Pausar eliminado por petición del usuario
+        
+        // Añadir acción de Reanudar (si hay pausadas/cola)
+        if (pausedOrQueuedCount > 0) {
             val resumeIntent = Intent(this, DownloadService::class.java).apply {
                 action = ACTION_RESUME_ALL
             }
@@ -158,9 +154,9 @@ class DownloadService : Service() {
         return builder.build()
     }
 
-    private fun updateNotification(activeCount: Int, queueCount: Int, totalSpeed: Long, progress: Int) {
+    private fun updateNotification(activeCount: Int, pausedOrQueuedCount: Int, totalSpeed: Long, progress: Int) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, createNotification(activeCount, queueCount, totalSpeed, progress))
+        notificationManager.notify(NOTIFICATION_ID, createNotification(activeCount, pausedOrQueuedCount, totalSpeed, progress))
     }
 
     private fun createNotificationChannel() {

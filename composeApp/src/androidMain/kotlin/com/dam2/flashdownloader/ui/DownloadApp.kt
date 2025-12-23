@@ -204,86 +204,69 @@ fun DownloadApp(
                     shape = MaterialTheme.shapes.large
                 )
                 
-                // Spinners de filtros (Categoría y Estado)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Spinner de categorías
+                var categoryExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = categoryExpanded,
+                    onExpandedChange = { categoryExpanded = it },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
-                    // Spinner 1: Categoría
-                    var categoryExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
+                    OutlinedTextField(
+                        value = uiState.selectedCategoryFilter?.let { "${it.iconName} ${it.displayName}" } ?: "📋 Todas las categorías",
+                        onValueChange = {},
+                        readOnly = true,
+                        leadingIcon = { Icon(Icons.Default.FilterList, null) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        singleLine = true
+                    )
+                    
+                    ExposedDropdownMenu(
                         expanded = categoryExpanded,
-                        onExpandedChange = { categoryExpanded = it },
-                        modifier = Modifier.weight(1f)
+                        onDismissRequest = { categoryExpanded = false }
                     ) {
-                        OutlinedTextField(
-                            value = uiState.selectedCategoryFilter?.displayName ?: "Todas",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Tipo") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
-                            modifier = Modifier.menuAnchor(),
-                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                            singleLine = true
+                        DropdownMenuItem(
+                            text = { Text("📋 Todas") },
+                            onClick = {
+                                viewModel.filterByCategory(null)
+                                categoryExpanded = false
+                            }
                         )
-                        
-                        ExposedDropdownMenu(
-                            expanded = categoryExpanded,
-                            onDismissRequest = { categoryExpanded = false }
-                        ) {
+                        Category.entries.forEach { category ->
                             DropdownMenuItem(
-                                text = { Text("Todas") },
+                                text = { Text("${category.iconName} ${category.displayName}") },
                                 onClick = {
-                                    viewModel.filterByCategory(null)
+                                    viewModel.filterByCategory(category)
                                     categoryExpanded = false
                                 }
                             )
-                            Category.entries.forEach { category ->
-                                DropdownMenuItem(
-                                    text = { Text(category.displayName) },
-                                    onClick = {
-                                        viewModel.filterByCategory(category)
-                                        categoryExpanded = false
-                                    }
-                                )
-                            }
                         }
                     }
+                }
 
-                    // Spinner 2: Estado
-                    var statusExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = statusExpanded,
-                        onExpandedChange = { statusExpanded = it },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        OutlinedTextField(
-                            value = selectedStatus.displayName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Estado") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
-                            modifier = Modifier.menuAnchor(),
-                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                            singleLine = true
+                // Tabs de estado (ScrollableTabRow para ajustar mejor)
+                val statusTabs = listOf(
+                    StatusFilter.ALL,
+                    StatusFilter.ACTIVE,
+                    StatusFilter.QUEUED,
+                    StatusFilter.COMPLETED
+                )
+                
+                ScrollableTabRow(
+                    selectedTabIndex = statusTabs.indexOf(selectedStatus),
+                    edgePadding = 12.dp,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary
+                ) {
+                    statusTabs.forEach { status ->
+                        Tab(
+                            selected = selectedStatus == status,
+                            onClick = { selectedStatus = status },
+                            text = { Text(status.displayName) }
                         )
-                        
-                        ExposedDropdownMenu(
-                            expanded = statusExpanded,
-                            onDismissRequest = { statusExpanded = false }
-                        ) {
-                            StatusFilter.entries.forEach { status ->
-                                DropdownMenuItem(
-                                    text = { Text(status.displayName) },
-                                    onClick = {
-                                        selectedStatus = status
-                                        statusExpanded = false
-                                    }
-                                )
-                            }
-                        }
                     }
                 }
 
@@ -378,6 +361,19 @@ fun DownloadApp(
                     onAutoDetectClipboardChange = { viewModel.toggleAutoDetectClipboard() },
                     onDismiss = viewModel::dismissSettingsDialog
                 )
+            }
+
+            // Detalles de descarga
+            if (uiState.showDetailsDialog && uiState.selectedDownloadId != null) {
+                val selectedDownload = downloads.find { it.id == uiState.selectedDownloadId }
+                if (selectedDownload != null) {
+                    val detailsSheetState = rememberModalBottomSheetState()
+                    com.dam2.flashdownloader.ui.dialogs.DownloadDetailsBottomSheet(
+                        download = selectedDownload,
+                        sheetState = detailsSheetState,
+                        onDismiss = viewModel::dismissDownloadDetails
+                    )
+                }
             }
         }
     }
