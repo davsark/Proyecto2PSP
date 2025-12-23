@@ -11,10 +11,12 @@ sealed class DownloadStatus {
      * La descarga está en cola esperando su turno
      * @param bytesDownloaded Bytes descargados hasta el momento (para resumir)
      * @param totalBytes Total de bytes (si se conoce)
+     * @param elapsedSeconds Tiempo acumulado si es reanudación
      */
     data class Queued(
         val bytesDownloaded: Long = 0L,
-        val totalBytes: Long = -1L
+        val totalBytes: Long = -1L,
+        val elapsedSeconds: Long? = null
     ) : DownloadStatus() {
         val progress: Float
             get() = if (totalBytes > 0) (bytesDownloaded.toFloat() / totalBytes.toFloat()) else 0f
@@ -25,11 +27,15 @@ sealed class DownloadStatus {
      * @param bytesDownloaded Bytes descargados hasta el momento
      * @param totalBytes Total de bytes a descargar (puede ser -1 si es desconocido)
      * @param speed Velocidad actual en bytes/segundo
+     * @param elapsedSeconds Tiempo acumulado de descarga activa (segundos)
+     * @param sessionStartTime Timestamp cuando comenzó la sesión actual de descarga
      */
     data class Downloading(
         val bytesDownloaded: Long,
         val totalBytes: Long,
-        val speed: Long = 0L
+        val speed: Long = 0L,
+        val elapsedSeconds: Long = 0L,
+        val sessionStartTime: Long = System.currentTimeMillis()
     ) : DownloadStatus() {
         val progress: Float
             get() = if (totalBytes > 0) (bytesDownloaded.toFloat() / totalBytes.toFloat()) else 0f
@@ -46,16 +52,24 @@ sealed class DownloadStatus {
                 val remainingBytes = totalBytes - bytesDownloaded
                 return remainingBytes / speed
             }
+            
+        /**
+         * Calcula el tiempo total transcurrido incluyendo la sesión actual
+         */
+        val totalElapsedSeconds: Long
+            get() = elapsedSeconds + ((System.currentTimeMillis() - sessionStartTime) / 1000)
     }
 
     /**
      * La descarga ha sido pausada manualmente
      * @param bytesDownloaded Bytes descargados antes de pausar
      * @param totalBytes Total de bytes a descargar
+     * @param elapsedSeconds Tiempo acumulado de descarga activa hasta la pausa
      */
     data class Paused(
         val bytesDownloaded: Long,
-        val totalBytes: Long
+        val totalBytes: Long,
+        val elapsedSeconds: Long
     ) : DownloadStatus() {
         val progress: Float
             get() = if (totalBytes > 0) (bytesDownloaded.toFloat() / totalBytes.toFloat()) else 0f

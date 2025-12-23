@@ -209,8 +209,22 @@ class DownloadManagerImpl(
             return@withContext Result.failure(Exception("La descarga ya está activa"))
         }
 
-        // Cambiar estado a en cola preserving progress
-        updateDownloadStatus(id, DownloadStatus.Queued(download.downloadedBytes, download.totalSize))
+        // Cambiar estado a en cola preserving progress AND elapsedSeconds if resuming
+        val queuedStatus = when (val currentStatus = download.status) {
+            is DownloadStatus.Paused -> {
+                println("🟡 QUEUING FROM PAUSED: preserving elapsedSeconds = ${currentStatus.elapsedSeconds}")
+                DownloadStatus.Queued(
+                    bytesDownloaded = download.downloadedBytes,
+                    totalBytes = download.totalSize,
+                    elapsedSeconds = currentStatus.elapsedSeconds // ✅ Preservar tiempo acumulado
+                )
+            }
+            else -> {
+                println("🟡 QUEUING NEW: no elapsedSeconds")
+                DownloadStatus.Queued(download.downloadedBytes, download.totalSize)
+            }
+        }
+        updateDownloadStatus(id, queuedStatus)
 
         // El init loop procesará automáticamente la cola
 
@@ -228,13 +242,21 @@ class DownloadManagerImpl(
         }
         job?.cancel()
 
-        // Actualizar estado a pausado
+        // Actualizar estado a pausado - calcular tiempo acumulado
         when (val status = download.status) {
             is DownloadStatus.Downloading -> {
+                // Calcular tiempo total acumulado hasta ahora
+                val totalElapsed = status.totalElapsedSeconds
+                println("🔵 PAUSANDO: elapsedSeconds acumulado = $totalElapsed")
                 updateDownloadStatus(
                     id,
-                    DownloadStatus.Paused(status.bytesDownloaded, status.totalBytes)
+                    DownloadStatus.Paused(
+                        bytesDownloaded = status.bytesDownloaded,
+                        totalBytes = status.totalBytes,
+                        elapsedSeconds = totalElapsed // ✅ Guardar tiempo acumulado
+                    )
                 )
+                println("🔵 PAUSADO: elapsedSeconds guardado = $totalElapsed")
             }
             else -> {
                 // Si no está descargando, no hacer nada
@@ -496,8 +518,27 @@ class DownloadManagerImpl(
         var retryCount = 0
         var lastException: Exception? = null
         
-        // Record start time for elapsed time tracking
-        val downloadStartTime = System.currentTimeMillis()
+        // Get accumulated elapsed time if resuming
+        val previousElapsed = when (val currentStatus = download.status) {
+            is DownloadStatus.Paused -> {
+                println("🔵 REANUDANDO FROM PAUSED: elapsedSeconds = ${currentStatus.elapsedSeconds}")
+                currentStatus.elapsedSeconds
+            }
+            is DownloadStatus.Queued -> {
+                if (currentStatus.elapsedSeconds != null) {
+                    println("🔵 REANUDANDO FROM QUEUED: elapsedSeconds = ${currentStatus.elapsedSeconds}")
+                    currentStatus.elapsedSeconds
+                } else {
+                    println("🔵 NUEVA DESCARGA FROM QUEUED")
+                    0L
+                }
+            }
+            else -> {
+                println("🔵 NUEVA DESCARGA")
+                0L
+            }
+        }
+        println("🔵 previousElapsed = $previousElapsed")
 
         // ✅ FEEDBACK INMEDIATO: Cambiar a estado Downloading AHORA
         // Esto evita que el usuario vea "En cola" mientras conectamos
@@ -506,7 +547,9 @@ class DownloadManagerImpl(
             DownloadStatus.Downloading(
                 bytesDownloaded = 0,
                 totalBytes = -1, // Indeterminado hasta obtener metadatos
-                speed = 0
+                speed = 0,
+                elapsedSeconds = previousElapsed,
+                sessionStartTime = System.currentTimeMillis()
             )
         )
 
@@ -523,7 +566,9 @@ class DownloadManagerImpl(
                         DownloadStatus.Downloading(
                             bytesDownloaded = 0,
                             totalBytes = metadata.totalBytes,
-                            speed = 0
+                            speed = 0,
+                            elapsedSeconds = previousElapsed,
+                            sessionStartTime = System.currentTimeMillis()
                         )
                     )
                 }
@@ -602,7 +647,9 @@ class DownloadManagerImpl(
                     DownloadStatus.Downloading(
                         bytesDownloaded = startByte,
                         totalBytes = metadata.totalBytes,
-                        speed = 0L
+                        speed = 0L,
+                        elapsedSeconds = previousElapsed,
+                        sessionStartTime = System.currentTimeMillis()
                     )
                 )
 
@@ -642,12 +689,19 @@ class DownloadManagerImpl(
                     speedTracker[id] = currentSpeed
 
                     // ✅ Actualizar estado con velocidad correcta
+                    // Preservar elapsedSeconds y sessionStartTime del estado actual
+                    val currentStatus = downloadsMutex.withLock {
+                        _downloadsList.find { it.id == id }?.status as? DownloadStatus.Downloading
+                    }
+                    
                     updateDownloadStatus(
                         id,
                         DownloadStatus.Downloading(
                             bytesDownloaded = progress.bytesDownloaded,
                             totalBytes = progress.totalBytes,
-                            speed = currentSpeed // Velocidad calculada
+                            speed = currentSpeed, // Velocidad calculada
+                            elapsedSeconds = currentStatus?.elapsedSeconds ?: previousElapsed,
+                            sessionStartTime = currentStatus?.sessionStartTime ?: System.currentTimeMillis()
                         )
                     )
 

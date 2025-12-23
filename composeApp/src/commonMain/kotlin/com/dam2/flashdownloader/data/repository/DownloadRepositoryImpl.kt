@@ -161,19 +161,23 @@ private sealed class SerializableDownloadStatus {
     @Serializable
     data class Queued(
         val bytesDownloaded: Long = 0L,
-        val totalBytes: Long = -1L
+        val totalBytes: Long = -1L,
+        val elapsedSeconds: Long? = null
     ) : SerializableDownloadStatus()
 
     @Serializable
     data class Downloading(
         val bytesDownloaded: Long,
-        val totalBytes: Long
+        val totalBytes: Long,
+        val elapsedSeconds: Long = 0L,
+        val sessionStartTime: Long
     ) : SerializableDownloadStatus()
 
     @Serializable
     data class Paused(
         val bytesDownloaded: Long,
-        val totalBytes: Long
+        val totalBytes: Long,
+        val elapsedSeconds: Long
     ) : SerializableDownloadStatus()
 
     @Serializable
@@ -208,9 +212,9 @@ private fun DownloadItem.toSerializable() = SerializableDownloadItem(
 )
 
 private fun DownloadStatus.toSerializable(): SerializableDownloadStatus = when (this) {
-    is DownloadStatus.Queued -> SerializableDownloadStatus.Queued(bytesDownloaded, totalBytes)
-    is DownloadStatus.Downloading -> SerializableDownloadStatus.Downloading(bytesDownloaded, totalBytes)
-    is DownloadStatus.Paused -> SerializableDownloadStatus.Paused(bytesDownloaded, totalBytes)
+    is DownloadStatus.Queued -> SerializableDownloadStatus.Queued(bytesDownloaded, totalBytes, elapsedSeconds)
+    is DownloadStatus.Downloading -> SerializableDownloadStatus.Downloading(bytesDownloaded, totalBytes, elapsedSeconds, sessionStartTime)
+    is DownloadStatus.Paused -> SerializableDownloadStatus.Paused(bytesDownloaded, totalBytes, elapsedSeconds)
     is DownloadStatus.Completed -> SerializableDownloadStatus.Completed(filePath, totalBytes)
     is DownloadStatus.Failed -> SerializableDownloadStatus.Failed(error, bytesDownloaded)
     is DownloadStatus.Cancelled -> SerializableDownloadStatus.Cancelled
@@ -231,11 +235,11 @@ private fun SerializableDownloadItem.toDomain() = DownloadItem(
 )
 
 private fun SerializableDownloadStatus.toDomain(): DownloadStatus = when (this) {
-    is SerializableDownloadStatus.Queued -> DownloadStatus.Queued(bytesDownloaded, totalBytes)
+    is SerializableDownloadStatus.Queued -> DownloadStatus.Queued(bytesDownloaded, totalBytes, elapsedSeconds)
     is SerializableDownloadStatus.Downloading -> {
-        DownloadStatus.Downloading(bytesDownloaded, totalBytes, 0L)
+        DownloadStatus.Downloading(bytesDownloaded, totalBytes, 0L, elapsedSeconds, sessionStartTime)
     }
-    is SerializableDownloadStatus.Paused -> DownloadStatus.Paused(bytesDownloaded, totalBytes)
+    is SerializableDownloadStatus.Paused -> DownloadStatus.Paused(bytesDownloaded, totalBytes, elapsedSeconds)
     is SerializableDownloadStatus.Completed -> DownloadStatus.Completed(filePath, totalBytes)
     is SerializableDownloadStatus.Failed -> DownloadStatus.Failed(error, bytesDownloaded)
     is SerializableDownloadStatus.Cancelled -> DownloadStatus.Cancelled

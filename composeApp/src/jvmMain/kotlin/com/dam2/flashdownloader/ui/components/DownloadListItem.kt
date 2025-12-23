@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -164,6 +165,7 @@ fun DownloadListItem(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+                            // Velocidad
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.Speed,
@@ -178,23 +180,53 @@ fun DownloadListItem(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
+                            
+                            // Tiempo transcurrido con etiqueta
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Transcurrido: ",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = status.totalElapsedSeconds.formatTime(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
 
+                            // Tiempo restante con etiqueta
                             if (status.estimatedTimeRemaining > 0) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Timer,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.secondary
+                                    Text(
+                                        text = "Restante: ",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = status.estimatedTimeRemaining.formatTime(),
                                         style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.secondary
                                     )
                                 }
                             }
+                        }
+                    }
+                    
+                    // Mostrar tiempo transcurrido también en Paused
+                    if (status is DownloadStatus.Paused) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Pausado - Transcurrido: ${status.elapsedSeconds.formatTime()}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
                         }
                     }
                 }
