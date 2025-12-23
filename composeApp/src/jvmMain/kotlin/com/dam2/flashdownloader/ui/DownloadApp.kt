@@ -188,6 +188,7 @@ fun DownloadApp(
                                 items = downloads,
                                 key = { it.id }
                             ) { download ->
+                                val index = downloads.indexOf(download)
                                 DownloadListItem(
                                     download = download,
                                     onPause = { viewModel.pauseDownload(download.id) },
@@ -198,7 +199,9 @@ fun DownloadApp(
                                     onMoveUp = { viewModel.moveDownloadUp(download.id) },
                                     onMoveDown = { viewModel.moveDownloadDown(download.id) },
                                     onClick = { viewModel.showDownloadDetails(download.id) },
-                                    dragHandleModifier = if (uiState.searchQuery.isEmpty()) Modifier else Modifier
+                                    dragHandleModifier = if (uiState.searchQuery.isEmpty()) Modifier else Modifier,
+                                    dragDropState = if (uiState.searchQuery.isEmpty()) dragDropState else null,
+                                    index = index
                                 )
                             }
                         }

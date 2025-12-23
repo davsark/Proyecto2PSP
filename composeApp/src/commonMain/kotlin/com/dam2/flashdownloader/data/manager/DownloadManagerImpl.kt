@@ -134,7 +134,8 @@ class DownloadManagerImpl(
         fileName: String?,
         category: Category?,
         priority: Priority,
-        speedLimit: Long?
+        speedLimit: Long?,
+        hash: String?
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             // Validar URL
@@ -164,7 +165,8 @@ class DownloadManagerImpl(
                 status = DownloadStatus.Queued(),
                 createdAt = currentTime,
                 speedLimit = speedLimit,
-                metadata = DownloadMetadata() // Se actualizará cuando inicie la descarga
+                metadata = DownloadMetadata(), // Se actualizará cuando inicie la descarga
+                hash = hash // ✅ Guardar hash esperado para verificación
             )
 
             // ✅ Lock MÍNIMO: solo para añadir a la lista
@@ -732,7 +734,39 @@ class DownloadManagerImpl(
                     null
                 }
 
-                // Descarga completada
+                // ✅ VERIFICACIÓN DE HASH: Si se proporcionó hash esperado, verificar
+                if (download.hash != null && download.hash.isNotBlank()) {
+                    if (calculatedHash == null) {
+                        // No se pudo calcular hash (archivo muy grande o error)
+                        println("⚠️ Hash verification skipped: Could not calculate hash for ${download.fileName}")
+                    } else if (!calculatedHash.equals(download.hash, ignoreCase = true)) {
+                        // ❌ Hash NO coincide - descarga corrupta o incorrecta
+                        println("❌ Hash verification FAILED for ${download.fileName}")
+                        println("   Expected: ${download.hash}")
+                        println("   Got:      $calculatedHash")
+                        
+                        updateDownloadStatus(
+                            id,
+                            DownloadStatus.Failed(
+                                error = "Hash verification failed. Expected: ${download.hash.take(16)}..., Got: ${calculatedHash.take(16)}...",
+                                bytesDownloaded = metadata.totalBytes
+                            ),
+                            forcePersist = true
+                        )
+                        
+                        // Limpiar tracking
+                        bytesTracker.remove(id)
+                        speedTracker.remove(id)
+                        lastPersistTime.remove(id)
+                        
+                        return // Salir sin marcar como completada
+                    } else {
+                        // ✅ Hash coincide - verificación exitosa
+                        println("✅ Hash verification PASSED for ${download.fileName}")
+                    }
+                }
+
+                // Descarga completada (y hash verificado si se proporcionó)
                 updateDownloadStatus(
                     id,
                     DownloadStatus.Completed(

@@ -22,6 +22,7 @@ import com.dam2.flashdownloader.ui.theme.DownloadColors
 import com.dam2.flashdownloader.utils.formatBytes
 import com.dam2.flashdownloader.utils.formatSpeed
 import com.dam2.flashdownloader.utils.formatTime
+import com.dam2.flashdownloader.ui.utils.dragContainer
 
 /**
  * Item de la lista de descargas optimizado para móvil
@@ -36,13 +37,22 @@ fun DownloadListItem(
     onRetry: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    dragHandleModifier: Modifier = Modifier
+    dragHandleModifier: Modifier = Modifier,
+    dragDropState: com.dam2.flashdownloader.ui.utils.DragDropState? = null,
+    index: Int = -1
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .then(
+                if (dragDropState != null && index >= 0) {
+                    Modifier.dragContainer(dragDropState, index)
+                } else {
+                    Modifier
+                }
+            )
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 6.dp),
         shape = RoundedCornerShape(16.dp),

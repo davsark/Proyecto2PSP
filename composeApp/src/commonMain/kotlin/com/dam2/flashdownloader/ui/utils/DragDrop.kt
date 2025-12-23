@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
@@ -109,4 +110,37 @@ fun Modifier.dragGestureHandler(
             onDragCancel = { state.onDragInterrupted() }
         )
     }
+}
+
+/**
+ * Modifier para aplicar feedback visual al item siendo arrastrado
+ */
+fun Modifier.dragContainer(
+    dragDropState: DragDropState,
+    index: Int
+): Modifier = composed {
+    val isDragging = dragDropState.draggingItemIndex == index
+    
+    // Animación de elevación
+    val elevation by animateDpAsState(
+        targetValue = if (isDragging) 8.dp else 2.dp,
+        label = "drag_elevation"
+    )
+    
+    // Offset visual para el item arrastrado
+    val offsetY = if (isDragging) {
+        dragDropState.draggingItemOffset
+    } else {
+        0f
+    }
+    
+    this
+        .graphicsLayer {
+            // Aplicar offset vertical
+            translationY = offsetY
+            // Añadir sombra/elevación
+            shadowElevation = elevation.toPx()
+            // Reducir opacidad ligeramente cuando se arrastra
+            alpha = if (isDragging) 0.9f else 1f
+        }
 }
