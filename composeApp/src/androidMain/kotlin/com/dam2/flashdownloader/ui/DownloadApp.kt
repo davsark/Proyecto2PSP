@@ -28,6 +28,16 @@ import org.koin.compose.koinInject
 import org.jetbrains.compose.resources.painterResource
 import flashdownloader.composeapp.generated.resources.Res
 import flashdownloader.composeapp.generated.resources.logo
+import com.dam2.flashdownloader.domain.model.DownloadStatus
+
+/**
+ * Enum para las pestañas de navegación
+ */
+enum class DownloadTab {
+    ACTIVE,      // Activas (Downloading, Queued, Paused)
+    COMPLETED,   // Completadas
+    FAILED       // Fallidas y Canceladas
+}
 
 /**
  * Aplicación principal de Android
@@ -249,11 +259,51 @@ fun DownloadApp(
                     shape = MaterialTheme.shapes.large
                 )
 
+                // TabRow para navegación entre estados
+                var selectedTab by remember { mutableStateOf(DownloadTab.ACTIVE) }
+                
+                TabRow(
+                    selectedTabIndex = selectedTab.ordinal,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Tab(
+                        selected = selectedTab == DownloadTab.ACTIVE,
+                        onClick = { selectedTab = DownloadTab.ACTIVE },
+                        text = { Text("Activas") },
+                        icon = { Icon(Icons.Default.Download, null) }
+                    )
+                    Tab(
+                        selected = selectedTab == DownloadTab.COMPLETED,
+                        onClick = { selectedTab = DownloadTab.COMPLETED },
+                        text = { Text("Completadas") },
+                        icon = { Icon(Icons.Default.CheckCircle, null) }
+                    )
+                    Tab(
+                        selected = selectedTab == DownloadTab.FAILED,
+                        onClick = { selectedTab = DownloadTab.FAILED },
+                        text = { Text("Fallidas") },
+                        icon = { Icon(Icons.Default.Error, null) }
+                    )
+                }
+
+                // Filtrar descargas según tab seleccionada
+                val tabFilteredDownloads = downloads.filter { download ->
+                    when (selectedTab) {
+                        DownloadTab.ACTIVE -> download.status is DownloadStatus.Downloading || 
+                                              download.status is DownloadStatus.Queued ||
+                                              download.status is DownloadStatus.Paused
+                        DownloadTab.COMPLETED -> download.status is DownloadStatus.Completed
+                        DownloadTab.FAILED -> download.status is DownloadStatus.Failed || 
+                                              download.status is DownloadStatus.Cancelled
+                    }
+                }
+
+
                 // Card de estadísticas
                 StatisticsCard(statistics = statistics)
 
                 // Lista de descargas
-                if (downloads.isEmpty()) {
+                if (tabFilteredDownloads.isEmpty()) {
                     EmptyState(
                         modifier = Modifier.fillMaxSize(),
                         onAddDownload = { viewModel.showAddDownloadDialog() }
@@ -267,10 +317,10 @@ fun DownloadApp(
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
                         items(
-                            items = downloads,
+                            items = tabFilteredDownloads,
                             key = { it.id }
                         ) { download ->
-                            val index = downloads.indexOf(download)
+                            val index = tabFilteredDownloads.indexOf(download)
                             DownloadListItem(
                                 download = download,
                                 onPause = { viewModel.pauseDownload(download.id) },

@@ -28,8 +28,13 @@ class DownloadService : Service() {
 
     companion object {
         const val CHANNEL_ID = "download_channel"
+        const val COMPLETION_CHANNEL_ID = "download_completion_channel"
         const val NOTIFICATION_ID = 1
         const val ACTION_STOP_SERVICE = "STOP_SERVICE"
+        const val ACTION_PAUSE_ALL = "PAUSE_ALL"
+        const val ACTION_RESUME_ALL = "RESUME_ALL"
+        
+        private var completionNotificationId = 1000
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -37,6 +42,7 @@ class DownloadService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        createCompletionNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification(0, 0, 0L))
         observeDownloads()
         
@@ -47,8 +53,22 @@ class DownloadService : Service() {
     }
 
     private fun observeDownloads() {
+        var previousDownloads = emptyList<com.dam2.flashdownloader.domain.model.DownloadItem>()
+        
         downloadManager.downloads
             .onEach { downloads ->
+                // Detectar descargas completadas
+                downloads.forEach { download ->
+                    val previous = previousDownloads.find { it.id == download.id }
+                    if (previous != null && 
+                        previous.status !is DownloadStatus.Completed && 
+                        download.status is DownloadStatus.Completed) {
+                        // Descarga recién completada
+                        showCompletionNotification(download.fileName)
+                    }
+                }
+                previousDownloads = downloads
+                
                 val activeDownloads = downloads.filter { it.status is DownloadStatus.Downloading }
                 
                 if (activeDownloads.isEmpty() && downloads.none { it.status is DownloadStatus.Queued }) {
@@ -98,6 +118,35 @@ class DownloadService : Service() {
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             
+        // Añadir acciones de Pausar/Reanudar
+        if (activeCount > 0) {
+            val pauseIntent = Intent(this, DownloadService::class.java).apply {
+                action = ACTION_PAUSE_ALL
+            }
+            val pausePendingIntent = PendingIntent.getService(
+                this, 1, pauseIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            builder.addAction(
+                android.R.drawable.ic_media_pause,
+                "Pausar",
+                pausePendingIntent
+            )
+        } else if (queueCount > 0) {
+            val resumeIntent = Intent(this, DownloadService::class.java).apply {
+                action = ACTION_RESUME_ALL
+            }
+            val resumePendingIntent = PendingIntent.getService(
+                this, 2, resumeIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            builder.addAction(
+                android.R.drawable.ic_media_play,
+                "Reanudar",
+                resumePendingIntent
+            )
+        }
+            
         if (activeCount == 1 && progress > 0) {
             builder.setProgress(100, progress, false)
         } else if (activeCount > 0) {
@@ -127,7 +176,61 @@ class DownloadService : Service() {
             notificationManager.createNotificationChannel(channel)
         }
     }
+    
+    private fun createCompletionNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                COMPLETION_CHANNEL_ID,
+                "Descargas completadas",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Notificaciones cuando una descarga se completa"
+                enableVibration(true)
+                setShowBadge(true)
+            }
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+    
+    private fun showCompletionNotification(fileName: String) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        
+        val notification = NotificationCompat.Builder(this, COMPLETION_CHANNEL_ID)
+            .setContentTitle("✅ Descarga completada")
+            .setContentText(fileName)
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+        
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(completionNotificationId++, notification)
+    }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_PAUSE_ALL -> {
+                scope.launch {
+                    downloadManager.pauseAll()
+                }
+            }
+            ACTION_RESUME_ALL -> {
+                scope.launch {
+                    downloadManager.resumeAll()
+                }
+            }
+        }
+        return START_STICKY
+    }
+    
     override fun onDestroy() {
         super.onDestroy()
         scope.cancel()
