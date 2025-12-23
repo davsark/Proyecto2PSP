@@ -24,6 +24,7 @@ import com.dam2.flashdownloader.ui.utils.dragGestureHandler
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import com.dam2.flashdownloader.domain.model.Category
 
 /**
  * Aplicación principal de Desktop
@@ -132,15 +133,35 @@ fun DownloadApp(
                             viewModel.filterByStatus(DownloadStatusFilter.FAILED)
                         }
                     )
+                    
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.Schedule, "En cola") },
+                        label = { Text("En cola") },
+                        selected = selectedNavItem == 4,
+                        onClick = {
+                            selectedNavItem = 4
+                            viewModel.filterByStatus(DownloadStatusFilter.QUEUED)
+                        }
+                    )
+                    
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.Pause, "Pausadas") },
+                        label = { Text("Pausadas") },
+                        selected = selectedNavItem == 5,
+                        onClick = {
+                            selectedNavItem = 5
+                            viewModel.filterByStatus(DownloadStatusFilter.PAUSED)
+                        }
+                    )
 
                     Spacer(modifier = Modifier.weight(1f))
 
                     NavigationRailItem(
                         icon = { Icon(Icons.Default.Settings, "Configuración") },
                         label = { Text("Ajustes") },
-                        selected = selectedNavItem == 4,
+                        selected = selectedNavItem == 6,
                         onClick = {
-                            selectedNavItem = 4
+                            selectedNavItem = 6
                             viewModel.showSettingsDialog()
                         }
                     )
@@ -156,10 +177,6 @@ fun DownloadApp(
                     TopBar(
                         searchQuery = uiState.searchQuery,
                         onSearchQueryChange = viewModel::updateSearchQuery,
-                        selectedCategoryFilter = uiState.selectedCategoryFilter,
-                        onCategoryFilterChange = viewModel::filterByCategory,
-                        selectedStatusFilter = uiState.selectedStatusFilter,
-                        onStatusFilterChange = viewModel::filterByStatus,
                         onAddDownload = viewModel::showAddDownloadDialog,
                         onPauseAll = { scope.launch { viewModel.pauseAll() } },
                         onResumeAll = { scope.launch { viewModel.resumeAll() } },
@@ -168,6 +185,29 @@ fun DownloadApp(
                         onToggleTheme = viewModel::toggleTheme,
                         isDarkTheme = isDarkTheme
                     )
+                    
+                    // Barra de navegación de categorías
+                    ScrollableTabRow(
+                        selectedTabIndex = if (uiState.selectedCategoryFilter == null) 0 else Category.entries.indexOf(uiState.selectedCategoryFilter) + 1,
+                        modifier = Modifier.fillMaxWidth(),
+                        edgePadding = 0.dp
+                    ) {
+                        // Tab "Todas"
+                        Tab(
+                            selected = uiState.selectedCategoryFilter == null,
+                            onClick = { viewModel.filterByCategory(null) },
+                            text = { Text("📋 Todas") }
+                        )
+                        
+                        // Tabs de categorías
+                        Category.entries.forEach { category ->
+                            Tab(
+                                selected = uiState.selectedCategoryFilter == category,
+                                onClick = { viewModel.filterByCategory(category) },
+                                text = { Text("${category.iconName} ${category.displayName}") }
+                            )
+                        }
+                    }
 
                     // Lista de descargas
                     if (downloads.isEmpty()) {

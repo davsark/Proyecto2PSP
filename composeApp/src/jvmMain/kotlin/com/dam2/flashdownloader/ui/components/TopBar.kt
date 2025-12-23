@@ -23,10 +23,6 @@ import flashdownloader.composeapp.generated.resources.logo
 fun TopBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    selectedCategoryFilter: Category?,
-    onCategoryFilterChange: (Category?) -> Unit,
-    selectedStatusFilter: DownloadStatusFilter?,
-    onStatusFilterChange: (DownloadStatusFilter?) -> Unit,
     onAddDownload: () -> Unit,
     onPauseAll: () -> Unit,
     onResumeAll: () -> Unit,
@@ -141,18 +137,6 @@ fun TopBar(
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium
-                )
-
-                // Filtro de categoría
-                CategoryFilterDropdown(
-                    selectedCategory = selectedCategoryFilter,
-                    onCategorySelected = onCategoryFilterChange
-                )
-
-                // Filtro de estado
-                StatusFilterDropdown(
-                    selectedStatus = selectedStatusFilter,
-                    onStatusSelected = onStatusFilterChange
                 )
             }
         }
