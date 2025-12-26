@@ -12,7 +12,7 @@ actual object FileOpener {
      * @param filePath Ruta completa del archivo
      * @return true si se abrió correctamente, false si hubo error
      */
-    fun openFileLocation(filePath: String): Boolean {
+    actual fun openFileLocation(filePath: String): Boolean {
         return try {
             if (!Desktop.isDesktopSupported()) {
                 return false
@@ -45,7 +45,7 @@ actual object FileOpener {
      * @param filePath Ruta completa del archivo
      * @return true si se abrió correctamente, false si hubo error
      */
-    fun openFile(filePath: String): Boolean {
+    actual fun openFile(filePath: String): Boolean {
         return try {
             if (!Desktop.isDesktopSupported()) {
                 return false
