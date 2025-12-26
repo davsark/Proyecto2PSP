@@ -69,9 +69,6 @@ fun DownloadApp(
         }
     }
 
-    // Estado de navegación
-    var selectedNavItem by remember { mutableStateOf(0) }
-    
     // Estado de Drag & Drop
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val dragDropState = rememberDragDropState(listState) { from, to ->
@@ -96,61 +93,10 @@ fun DownloadApp(
                     NavigationRailItem(
                         icon = { Icon(Icons.Default.CloudDownload, "Todas") },
                         label = { Text("Todas") },
-                        selected = selectedNavItem == 0,
+                        selected = true,
                         onClick = {
-                            selectedNavItem = 0
                             viewModel.filterByStatus(null)
                             viewModel.filterByCategory(null)
-                        }
-                    )
-
-                    NavigationRailItem(
-                        icon = { Icon(Icons.Default.Download, "Descargando") },
-                        label = { Text("Activas") },
-                        selected = selectedNavItem == 1,
-                        onClick = {
-                            selectedNavItem = 1
-                            viewModel.filterByStatus(DownloadStatusFilter.ACTIVE)
-                        }
-                    )
-
-                    NavigationRailItem(
-                        icon = { Icon(Icons.Default.CheckCircle, "Completadas") },
-                        label = { Text("Completas") },
-                        selected = selectedNavItem == 2,
-                        onClick = {
-                            selectedNavItem = 2
-                            viewModel.filterByStatus(DownloadStatusFilter.COMPLETED)
-                        }
-                    )
-
-                    NavigationRailItem(
-                        icon = { Icon(Icons.Default.Error, "Fallidas") },
-                        label = { Text("Fallidas") },
-                        selected = selectedNavItem == 3,
-                        onClick = {
-                            selectedNavItem = 3
-                            viewModel.filterByStatus(DownloadStatusFilter.FAILED)
-                        }
-                    )
-                    
-                    NavigationRailItem(
-                        icon = { Icon(Icons.Default.Schedule, "En cola") },
-                        label = { Text("En cola") },
-                        selected = selectedNavItem == 4,
-                        onClick = {
-                            selectedNavItem = 4
-                            viewModel.filterByStatus(DownloadStatusFilter.QUEUED)
-                        }
-                    )
-                    
-                    NavigationRailItem(
-                        icon = { Icon(Icons.Default.Pause, "Pausadas") },
-                        label = { Text("Pausadas") },
-                        selected = selectedNavItem == 5,
-                        onClick = {
-                            selectedNavItem = 5
-                            viewModel.filterByStatus(DownloadStatusFilter.PAUSED)
                         }
                     )
                 }
@@ -171,31 +117,12 @@ fun DownloadApp(
                         onClearCompleted = { scope.launch { viewModel.clearCompleted() } },
                         onSettings = viewModel::showSettingsDialog,
                         onToggleTheme = viewModel::toggleTheme,
-                        isDarkTheme = isDarkTheme
+                        isDarkTheme = isDarkTheme,
+                        selectedCategory = uiState.selectedCategoryFilter,
+                        onCategorySelected = viewModel::filterByCategory,
+                        selectedStatus = uiState.selectedStatusFilter,
+                        onStatusSelected = viewModel::filterByStatus
                     )
-                    
-                    // Barra de navegación de categorías
-                    ScrollableTabRow(
-                        selectedTabIndex = if (uiState.selectedCategoryFilter == null) 0 else Category.entries.indexOf(uiState.selectedCategoryFilter) + 1,
-                        modifier = Modifier.fillMaxWidth(),
-                        edgePadding = 0.dp
-                    ) {
-                        // Tab "Todas"
-                        Tab(
-                            selected = uiState.selectedCategoryFilter == null,
-                            onClick = { viewModel.filterByCategory(null) },
-                            text = { Text("📋 Todas") }
-                        )
-                        
-                        // Tabs de categorías
-                        Category.entries.forEach { category ->
-                            Tab(
-                                selected = uiState.selectedCategoryFilter == category,
-                                onClick = { viewModel.filterByCategory(category) },
-                                text = { Text("${category.iconName} ${category.displayName}") }
-                            )
-                        }
-                    }
 
                     // Lista de descargas
                     if (downloads.isEmpty()) {
