@@ -153,18 +153,6 @@ fun DownloadApp(
                             viewModel.filterByStatus(DownloadStatusFilter.PAUSED)
                         }
                     )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    NavigationRailItem(
-                        icon = { Icon(Icons.Default.Settings, "Configuración") },
-                        label = { Text("Ajustes") },
-                        selected = selectedNavItem == 6,
-                        onClick = {
-                            selectedNavItem = 6
-                            viewModel.showSettingsDialog()
-                        }
-                    )
                 }
 
                 // Contenido principal
