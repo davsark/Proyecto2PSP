@@ -203,82 +203,90 @@ fun DownloadApp(
                     singleLine = true,
                     shape = MaterialTheme.shapes.large
                 )
-                
-                // Spinner de categorías
-                var categoryExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = categoryExpanded,
-                    onExpandedChange = { categoryExpanded = it },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+
+                // Fila de spinners (categorías y estados)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
-                        value = uiState.selectedCategoryFilter?.let { "${it.iconName} ${it.displayName}" } ?: "📋 Todas las categorías",
-                        onValueChange = {},
-                        readOnly = true,
-                        leadingIcon = { Icon(Icons.Default.FilterList, null) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        singleLine = true
-                    )
-                    
-                    ExposedDropdownMenu(
+                    // Spinner de categorías
+                    var categoryExpanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
                         expanded = categoryExpanded,
-                        onDismissRequest = { categoryExpanded = false }
+                        onExpandedChange = { categoryExpanded = it },
+                        modifier = Modifier.weight(1f)
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("📋 Todas") },
-                            onClick = {
-                                viewModel.filterByCategory(null)
-                                categoryExpanded = false
-                            }
+                        OutlinedTextField(
+                            value = uiState.selectedCategoryFilter?.displayName ?: "Todas",
+                            onValueChange = {},
+                            readOnly = true,
+                            leadingIcon = { Icon(Icons.Default.FilterList, null) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            singleLine = true
                         )
-                        Category.entries.forEach { category ->
+
+                        ExposedDropdownMenu(
+                            expanded = categoryExpanded,
+                            onDismissRequest = { categoryExpanded = false }
+                        ) {
                             DropdownMenuItem(
-                                text = { Text("${category.iconName} ${category.displayName}") },
+                                text = { Text("📋 Todas") },
                                 onClick = {
-                                    viewModel.filterByCategory(category)
+                                    viewModel.filterByCategory(null)
                                     categoryExpanded = false
                                 }
                             )
+                            Category.entries.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text("${category.iconName} ${category.displayName}") },
+                                    onClick = {
+                                        viewModel.filterByCategory(category)
+                                        categoryExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
-                }
 
-                // Spinner de estados
-                var statusExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = statusExpanded,
-                    onExpandedChange = { statusExpanded = it },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    OutlinedTextField(
-                        value = selectedStatus.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        leadingIcon = { Icon(Icons.Default.FilterAlt, null) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        singleLine = true
-                    )
-
-                    ExposedDropdownMenu(
+                    // Spinner de estados
+                    var statusExpanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
                         expanded = statusExpanded,
-                        onDismissRequest = { statusExpanded = false }
+                        onExpandedChange = { statusExpanded = it },
+                        modifier = Modifier.weight(1f)
                     ) {
-                        StatusFilter.entries.forEach { status ->
-                            DropdownMenuItem(
-                                text = { Text(status.displayName) },
-                                onClick = {
-                                    selectedStatus = status
-                                    statusExpanded = false
-                                }
-                            )
+                        OutlinedTextField(
+                            value = selectedStatus.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            leadingIcon = { Icon(Icons.Default.FilterAlt, null) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            singleLine = true
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = statusExpanded,
+                            onDismissRequest = { statusExpanded = false }
+                        ) {
+                            StatusFilter.entries.forEach { status ->
+                                DropdownMenuItem(
+                                    text = { Text(status.displayName) },
+                                    onClick = {
+                                        selectedStatus = status
+                                        statusExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
