@@ -44,14 +44,16 @@ actual class HashCalculator {
         expectedHash: String,
         algorithm: HashAlgorithm
     ): Result<Boolean> {
-        return when (val hashResult = calculateFileHash(filePath, algorithm)) {
-            is Result.Success -> {
-                val calculatedHash = hashResult.getOrNull() ?: ""
-                val normalizedExpected = expectedHash.lowercase().trim()
-                val normalizedCalculated = calculatedHash.lowercase().trim()
-                Result.success(normalizedExpected == normalizedCalculated)
-            }
-            is Result.Failure -> hashResult
+        val hashResult = calculateFileHash(filePath, algorithm)
+
+        return if (hashResult.isSuccess) {
+            val calculatedHash = hashResult.getOrNull() ?: ""
+            val normalizedExpected = expectedHash.lowercase().trim()
+            val normalizedCalculated = calculatedHash.lowercase().trim()
+            Result.success(normalizedExpected == normalizedCalculated)
+        } else {
+            // Propagar el error
+            Result.failure(hashResult.exceptionOrNull() ?: Exception("Error desconocido"))
         }
     }
 
