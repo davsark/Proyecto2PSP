@@ -649,8 +649,8 @@ class DownloadManagerImpl(
                     }
                 }
 
-                // ✅ FIX: NO aplicar límite de velocidad aquí (lo hace DownloadClient)
-                val speedLimit = download.speedLimit ?: _globalSpeedLimit.value
+                // ✅ FIX: Solo usar límite individual, NO el global (el global se maneja aparte)
+                val speedLimit = download.speedLimit
 
                 val fullPath = "$downloadPath/${download.fileName}"
                 val fileWriter = fileWriterFactory.createFileWriter()
@@ -694,7 +694,12 @@ class DownloadManagerImpl(
                     val currentTime = System.currentTimeMillis()
                     val timeDelta = (currentTime - lastProgressTime) / 1000.0
                     val bytesDelta = progress.bytesDownloaded - lastProgressBytes
-                    
+
+                    // ✅ Aplicar límite global de velocidad
+                    if (bytesDelta > 0) {
+                        globalLimiter.acquire(bytesDelta.toInt())
+                    }
+
                     val currentSpeed = if (timeDelta > 0) {
                         (bytesDelta / timeDelta).toLong()
                     } else {
