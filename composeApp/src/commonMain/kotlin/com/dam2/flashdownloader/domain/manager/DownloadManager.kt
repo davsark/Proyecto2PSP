@@ -37,6 +37,7 @@ interface DownloadManager {
      * @param fileName Nombre del archivo (opcional, se detecta automáticamente)
      * @param category Categoría (opcional, se detecta desde la extensión)
      * @param priority Prioridad de la descarga
+     * @param hash Hash SHA-256 esperado para verificación de integridad (opcional)
      * @return ID de la descarga creada
      */
     suspend fun addDownload(
@@ -44,7 +45,8 @@ interface DownloadManager {
         fileName: String? = null,
         category: Category? = null,
         priority: Priority = Priority.MEDIUM,
-        speedLimit: Long? = null
+        speedLimit: Long? = null,
+        hash: String? = null
     ): Result<String>
 
     /**
@@ -132,6 +134,11 @@ interface DownloadManager {
      * Limpia todas las descargas completadas
      */
     suspend fun clearCompleted(): Result<Unit>
+
+    /**
+     * Mueve una descarga a una posición específica en la lista
+     */
+    suspend fun moveDownloadToPosition(id: String, newIndex: Int): Result<Unit>
 
     /**
      * Reintenta una descarga fallida

@@ -40,6 +40,16 @@ class JvmFileWriter : FileWriter {
         }
     }
 
+    override fun flush() {
+        try {
+            randomAccessFile?.fd?.sync()  // Flush to disk for RandomAccessFile
+            outputStream?.flush()  // Flush for FileOutputStream
+        } catch (e: Exception) {
+            println("Error haciendo flush: ${e.message}")
+            // No lanzar excepción, flush es best-effort
+        }
+    }
+
     override fun close() {
         try {
             randomAccessFile?.close()
@@ -49,6 +59,20 @@ class JvmFileWriter : FileWriter {
         } finally {
             randomAccessFile = null
             outputStream = null
+        }
+    }
+
+    override fun delete(path: String): Boolean {
+        return try {
+            val file = File(path)
+            if (file.exists()) {
+                file.delete()
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            println("Error eliminando archivo: ${e.message}")
+            false
         }
     }
 }

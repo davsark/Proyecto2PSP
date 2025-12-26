@@ -27,7 +27,7 @@ class DownloadViewModel(
     val downloads: StateFlow<List<DownloadItem>> = downloadManager.downloads
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,  // ✅ CRÍTICO: Siempre activo para actualizaciones en tiempo real
             initialValue = emptyList()
         )
 
@@ -141,7 +141,8 @@ class DownloadViewModel(
         fileName: String? = null,
         category: Category? = null,
         priority: Priority = Priority.MEDIUM,
-        speedLimit: Long? = null
+        speedLimit: Long? = null,
+        hash: String? = null
     ) {
         viewModelScope.launch {
             if (!url.isValidUrl()) {
@@ -151,7 +152,7 @@ class DownloadViewModel(
 
             _uiState.update { it.copy(isLoading = true) }
 
-            downloadManager.addDownload(url, fileName, category, priority, speedLimit)
+            downloadManager.addDownload(url, fileName, category, priority, speedLimit, hash)
                 .onSuccess { id ->
                     emitEvent(UiEvent.Success("Descarga añadida correctamente"))
                     dismissAddDownloadDialog()
@@ -359,6 +360,25 @@ class DownloadViewModel(
         }
     }
 
+    fun moveDownload(fromIndex: Int, toIndex: Int) {
+        val currentFiltered = filteredDownloads.value
+        // Validar índices en la lista filtrada (lo que ve el usuario)
+        if (fromIndex in currentFiltered.indices && toIndex in currentFiltered.indices) {
+            val fromItem = currentFiltered[fromIndex]
+            val toItem = currentFiltered[toIndex]
+            
+            // Obtener lista completa actual para calcular índices reales
+            val fullList = downloads.value
+            val realToIndex = fullList.indexOfFirst { it.id == toItem.id }
+            
+            if (realToIndex != -1) {
+                viewModelScope.launch {
+                    downloadManager.moveDownloadToPosition(fromItem.id, realToIndex)
+                }
+            }
+        }
+    }
+
     // SECCIÓN 6: CONFIGURACIÓN
 
     /**
@@ -435,7 +455,8 @@ class DownloadViewModel(
                 addDownloadUrl = "",
                 addDownloadFileName = "",
                 addDownloadCategory = null,
-                addDownloadPriority = Priority.MEDIUM
+                addDownloadPriority = Priority.MEDIUM,
+                addDownloadHash = "" // ✅ Limpiar hash también
             )
         }
     }
@@ -466,6 +487,13 @@ class DownloadViewModel(
      */
     fun updateAddDownloadPriority(priority: Priority) {
         _uiState.update { it.copy(addDownloadPriority = priority) }
+    }
+
+    /**
+     * Actualiza el hash del diálogo
+     */
+    fun updateAddDownloadHash(hash: String) {
+        _uiState.update { it.copy(addDownloadHash = hash) }
     }
 
     /**
@@ -661,6 +689,7 @@ data class DownloadUiState(
     val addDownloadFileName: String = "",
     val addDownloadCategory: Category? = null,
     val addDownloadPriority: Priority = Priority.MEDIUM,
+    val addDownloadHash: String = "", // ✅ Hash SHA-256 opcional para verificación
     val selectedCategoryFilter: Category? = null,
     val selectedStatusFilter: DownloadStatusFilter? = null,
     val searchQuery: String = "",

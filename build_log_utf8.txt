@@ -1,0 +1,826 @@
+﻿Reusing configuration cache.
+> Task :composeApp:kmpPartiallyResolvedDependenciesChecker
+> Task :composeApp:copyNonXmlValueResourcesForJvmMain NO-SOURCE
+> Task :composeApp:generateComposeResClass UP-TO-DATE
+> Task :composeApp:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :composeApp:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :composeApp:convertXmlValueResourcesForJvmMain NO-SOURCE
+> Task :composeApp:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :composeApp:prepareComposeResourcesTaskForJvmMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :composeApp:generateResourceAccessorsForJvmMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :composeApp:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :composeApp:generateActualResourceCollectorsForJvmMain UP-TO-DATE
+
+> Task :composeApp:compileKotlinJvm FAILED
+.\gradlew.bat : e: file:///C:/Users/oscar/Docum
+ents/IntelliJ/Proyecto2PSP/composeApp/src/jvmMa
+in/kotlin/com/dam2/flashdownloader/main.kt:9:36
+ Unresolved reference 'DownloadApp'.
+En línea: 1 Carácter: 1
++ .\gradlew.bat :composeApp:compileKotlinJvm > 
+build_log.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (e 
+   : file:///C:/U... 'DownloadApp'.:String) [  
+  ], RemoteException
+    + FullyQualifiedErrorId : NativeCommandErr 
+   or
+ 
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/main.kt:32:13 Unresolved 
+reference 'DownloadApp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:7:2 
+Unresolved reference 'Composable'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:8:5 
+Functions which invoke @Composable functions 
+must be marked with the @Composable annotation
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:9:16 
+Unresolved reference 'DownloadViewModel'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:9:36 
+Unresolved reference 'koinInject'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:11:32 
+Unresolved reference 'filteredDownloads'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:12:33 
+Unresolved reference 'statistics'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:13:30 
+Unresolved reference 'uiState'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:14:34 
+Unresolved reference 'isDarkTheme'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:15:45 
+Unresolved reference 'maxConcurrentDownloads'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:16:39 
+Unresolved reference 'globalSpeedLimit'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:18:29 
+Unresolved reference 'remember'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:18:40 
+Unresolved reference 'SnackbarHostState'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:19:17 
+Unresolved reference 'rememberCoroutineScope'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:23:5 
+Unresolved reference 'LaunchedEffect'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:24:19 
+Unresolved reference 'uiEvents'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:24:44 
+Cannot infer type for value parameter 'event'. 
+Specify it explicitly.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:26:20 
+Unresolved reference 'UiEvent'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:28:41 
+Unresolved reference 'message'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:29:36 
+Unresolved reference 'SnackbarDuration'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:32:20 
+Unresolved reference 'UiEvent'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:34:46 
+Unresolved reference 'message'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:35:36 
+Unresolved reference 'SnackbarDuration'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:38:20 
+Unresolved reference 'UiEvent'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:40:41 
+Unresolved reference 'message'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:41:36 
+Unresolved reference 'SnackbarDuration'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:49:28 
+Unresolved reference 'remember'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:49:39 
+Unresolved reference 'mutableStateOf'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:52:54 
+@Composable invocations can only happen from 
+the context of a @Composable function
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:53:25 
+@Composable invocations can only happen from 
+the context of a @Composable function
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:54:19 
+Unresolved reference 'moveDownload'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:57:5 
+Unresolved reference 'FlashDownloaderTheme'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:58:9 
+Unresolved reference 'Scaffold'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:59:30 
+Unresolved reference 'SnackbarHost'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:60:13 
+Cannot infer type for value parameter 
+'paddingValues'. Specify it explicitly.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:61:13 
+Unresolved reference 'Row'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:62:28 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:68:17 
+Unresolved reference 'NavigationRail'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:69:32 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:71:21 
+Unresolved reference 'Spacer'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:71:39 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:71:58 
+Unresolved reference 'dp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:73:21 
+Unresolved reference 'NavigationRailItem'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:74:34 
+Unresolved reference 'Icon'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:74:39 
+Unresolved reference 'Icons'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:75:35 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:79:39 
+Unresolved reference 'filterByStatus'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:80:39 
+Unresolved reference 'filterByCategory'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:84:21 
+Unresolved reference 'NavigationRailItem'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:85:34 
+Unresolved reference 'Icon'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:85:39 
+Unresolved reference 'Icons'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:86:35 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:90:39 
+Unresolved reference 'filterByStatus'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:90:54 
+Unresolved reference 'DownloadStatusFilter'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:93:21 
+Unresolved reference 'NavigationRailItem'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:94:34 
+Unresolved reference 'Icon'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:94:39 
+Unresolved reference 'Icons'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:95:35 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:99:39 
+Unresolved reference 'filterByStatus'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:99:54 
+Unresolved reference 'DownloadStatusFilter'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:102:21 
+Unresolved reference 'NavigationRailItem'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:103:34 
+Unresolved reference 'Icon'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:103:39 
+Unresolved reference 'Icons'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:104:35 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:108:39 
+Unresolved reference 'filterByStatus'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:108:54 
+Unresolved reference 'DownloadStatusFilter'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:111:21 
+Unresolved reference 'Spacer'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:111:39 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:112:21 
+Unresolved reference 'NavigationRailItem'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:113:34 
+Unresolved reference 'Icon'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:113:39 
+Unresolved reference 'Icons'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:114:35 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:118:39 
+Unresolved reference 'showSettingsDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:124:17 
+Unresolved reference 'Column'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:125:32 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:130:21 
+Unresolved reference 'TopBar'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:131:47 
+Unresolved reference 'searchQuery'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:132:58 
+Unresolved reference 'updateSearchQuery'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:133:58 
+Unresolved reference 'selectedCategoryFilter'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:134:61 
+Unresolved reference 'filterByCategory'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:135:56 
+Unresolved reference 'selectedStatusFilter'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:136:59 
+Unresolved reference 'filterByStatus'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:137:52 
+Unresolved reference 'showAddDownloadDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:138:65 
+Unresolved reference 'pauseAll'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:139:66 
+Unresolved reference 'resumeAll'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:140:71 
+Unresolved reference 'clearCompleted'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:141:49 
+Unresolved reference 'showSettingsDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:142:52 
+Unresolved reference 'toggleTheme'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:150:40 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:151:56 
+Unresolved reference 'showAddDownloadDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:154:25 
+Unresolved reference 'LazyColumn'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:156:40 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:159:46 
+Unresolved reference 'PaddingValues'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:159:73 
+Unresolved reference 'dp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:161:29 
+Unresolved reference 'items'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:163:41 
+Unresolved reference 'it'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:164:33 
+Cannot infer type for value parameter 
+'download'. Specify it explicitly.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:168:33 
+Unresolved reference 'DownloadListItem'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:170:59 
+Unresolved reference 'pauseDownload'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:170:82 
+Unresolved reference 'id'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:171:60 
+Unresolved reference 'resumeDownload'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:171:84 
+Unresolved reference 'id'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:172:60 
+Unresolved reference 'cancelDownload'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:172:84 
+Unresolved reference 'id'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:173:60 
+Unresolved reference 'removeDownload'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:173:84 
+Unresolved reference 'id'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:174:59 
+Unresolved reference 'retryDownload'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:174:82 
+Unresolved reference 'id'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:175:60 
+Unresolved reference 'moveDownloadUp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:175:84 
+Unresolved reference 'id'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:176:62 
+Unresolved reference 'moveDownloadDown'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:176:88 
+Unresolved reference 'id'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:177:59 
+Unresolved reference 'showDownloadDetails'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:177:88 
+Unresolved reference 'id'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:179:70 
+Unresolved reference 'searchQuery'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:179:93 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:179:107 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:187:17 
+Unresolved reference 'StatisticsPanel'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:191:25 
+Unresolved reference 'showAddDownloadDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:192:17 
+Unresolved reference 'AddDownloadDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:193:35 
+Unresolved reference 'addDownloadUrl'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:194:46 
+Unresolved reference 'updateAddDownloadUrl'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:195:40 
+Unresolved reference 'addDownloadFileName'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:196:51 
+Unresolved reference 
+'updateAddDownloadFileName'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:197:40 
+Unresolved reference 'addDownloadCategory'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:198:51 
+Unresolved reference 
+'updateAddDownloadCategory'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:199:40 
+Unresolved reference 'addDownloadPriority'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:200:51 
+Unresolved reference 
+'updateAddDownloadPriority'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:202:35 
+Unresolved reference 'addDownload'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:203:43 
+Unresolved reference 'addDownloadUrl'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:204:48 
+Unresolved reference 'addDownloadFileName'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:204:68 
+Cannot infer type for type parameter 'C'. 
+Specify it explicitly.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:204:68 
+Cannot infer type for type parameter 'R'. 
+Specify it explicitly.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:205:48 
+Unresolved reference 'addDownloadCategory'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:206:48 
+Unresolved reference 'addDownloadPriority'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:209:44 
+Unresolved reference 
+'dismissAddDownloadDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:210:71 
+Unresolved reference 'addFromClipboard'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:214:25 
+Unresolved reference 'showSettingsDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:215:17 
+Unresolved reference 'SettingsDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:217:66 
+Unresolved reference 
+'setMaxConcurrentDownloads'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:217:92 
+Unresolved reference 'it'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:219:60 
+Unresolved reference 'setGlobalSpeedLimit'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:219:80 
+Unresolved reference 'it'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:220:51 
+Unresolved reference 'autoDetectClipboard'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:221:63 
+Unresolved reference 
+'toggleAutoDetectClipboard'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:222:44 
+Unresolved reference 'dismissSettingsDialog'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:227:25 
+Unresolved reference 'showClipboardSuggestion'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:227:60 
+Unresolved reference 'suggestedUrl'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:229:35 
+Unresolved reference 'suggestedUrl'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:230:43 
+Unresolved reference 
+'acceptClipboardSuggestion'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:231:44 
+Unresolved reference 
+'dismissClipboardSuggestion'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:238:2 
+Unresolved reference 'Composable'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:241:15 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:241:26 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:243:5 
+Unresolved reference 'Column'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:245:31 
+Unresolved reference 'Alignment'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:246:31 
+Unresolved reference 'Arrangement'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:248:9 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:250:21 
+Unresolved reference 'MaterialTheme'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:252:9 
+Unresolved reference 'Spacer'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:252:27 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:252:46 
+Unresolved reference 'dp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:253:9 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:255:21 
+Unresolved reference 'MaterialTheme'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:256:21 
+Unresolved reference 'MaterialTheme'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:258:9 
+Unresolved reference 'Spacer'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:258:27 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:258:45 
+Unresolved reference 'dp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:259:9 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:261:21 
+Unresolved reference 'MaterialTheme'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:262:21 
+Unresolved reference 'MaterialTheme'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:264:9 
+Unresolved reference 'Spacer'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:264:27 
+Unresolved reference 'Modifier'.
+8 actionable tasks: 2 executed, 6 up-to-date
+Configuration cache entry reused.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:264:46 
+Unresolved reference 'dp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:265:9 
+Unresolved reference 'Button'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:266:13 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:271:2 
+Unresolved reference 'Composable'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:277:5 
+Unresolved reference 'Snackbar'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:278:20 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:278:40 
+Unresolved reference 'dp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:280:13 
+Unresolved reference 'Row'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:281:17 
+Unresolved reference 'TextButton'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:282:21 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:284:17 
+Unresolved reference 'Spacer'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:284:35 
+Unresolved reference 'Modifier'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:284:52 
+Unresolved reference 'dp'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:285:17 
+Unresolved reference 'TextButton'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:286:21 
+Unresolved reference 'Text'.
+e: file:///C:/Users/oscar/Documents/IntelliJ/Pr
+oyecto2PSP/composeApp/src/jvmMain/kotlin/com/da
+m2/flashdownloader/ui/DownloadApp.kt:291:9 
+Unresolved reference 'Text'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task 
+':composeApp:compileKotlinJvm'.
+> A failure occurred while executing org.jetbra
+ins.kotlin.compilerRunner.GradleCompilerRunnerW
+ithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more 
+details
+
+* Try:
+> Run with --stacktrace option to get the 
+stack trace.
+> Run with --info or --debug option to get 
+more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 3s

@@ -28,19 +28,29 @@ fun commonModule() = module {
                 maxConnectionsCount = 1000
                 endpoint {
                     maxConnectionsPerRoute = 100
-                    pipelineMaxSize = 20
-                    keepAliveTime = 5000
-                    connectTimeout = 30_000 // 30 segundos para establecer conexión
-                    connectAttempts = 5
-                    socketTimeout = 60_000 // 60 segundos sin recibir datos = conexión muerta
+                    pipelineMaxSize = 20  // ✅ Reducido de 50 para estabilidad
+                    keepAliveTime = 600_000  // ✅ 10 minutos (mantener conexión viva)
+                    connectTimeout = 180_000  // ✅ 3 minutos para establecer conexión
+                    connectAttempts = 10  // ✅ Aumentado de 5 a 10
+                    socketTimeout = 900_000  // ✅ 15 minutos sin recibir datos
+                }
+                // ✅ Configuración adicional para archivos muy grandes
+                https {
+                    trustManager = null  // Usar el trust manager del sistema
                 }
             }
 
-            // ✅ CRÍTICO: Configurar timeouts HTTP para archivos grandes
+            // ✅ CRÍTICO: Seguir redirecciones HTTP automáticamente
+            install(HttpRedirect) {
+                checkHttpMethod = false  // Permitir redirecciones en cualquier método HTTP
+                allowHttpsDowngrade = false  // No permitir downgrade de HTTPS a HTTP
+            }
+
+            // ✅ CRÍTICO: Configurar timeouts HTTP para archivos grandes (2GB+)
             install(HttpTimeout) {
-                connectTimeoutMillis = 30_000 // 30s para conectar
-                socketTimeoutMillis = 60_000  // 60s entre bytes (detecta stalls)
-                requestTimeoutMillis = null   // ✅ SIN LÍMITE para descargas largas
+                connectTimeoutMillis = 180_000  // ✅ 3 minutos para conectar
+                socketTimeoutMillis = 900_000   // ✅ 15 minutos entre bytes
+                requestTimeoutMillis = null     // ✅ SIN LÍMITE total para descargas largas
             }
         }
     }

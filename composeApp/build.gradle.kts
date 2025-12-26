@@ -23,6 +23,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(compose.runtime)
+                implementation(compose.animation)
                 implementation(compose.foundation)
                 implementation(compose.material3)
                 implementation(compose.materialIconsExtended)
@@ -124,6 +125,16 @@ compose.desktop {
             // Incluir todas las dependencias necesarias
             modules("java.sql", "jdk.unsupported")
         }
+
+        // ✅ CRÍTICO: Configuración JVM para manejar archivos muy grandes (2GB+)
+        jvmArgs += listOf(
+            "-Xmx8192m",  // 8GB heap máximo (aumentado para archivos 2GB+)
+            "-Xms1024m",  // 1GB heap inicial
+            "-XX:+UseG1GC",  // Garbage collector G1 (mejor para heap grande)
+            "-XX:MaxGCPauseMillis=200",  // Pausas GC máximas de 200ms
+            "-XX:+UseStringDeduplication",  // Reducir memoria de strings duplicados
+            "-XX:G1HeapRegionSize=32m"  // Regiones grandes para archivos grandes
+        )
 
         // Configuración de runtime para incluir todas las dependencias
         buildTypes.release.proguard {

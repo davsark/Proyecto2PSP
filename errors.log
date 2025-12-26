@@ -1,0 +1,60 @@
+﻿Calculating task graph as no cached configuration is available for tasks: clean :composeApp:compileKotlinJvm
+Type-safe project accessors is an incubating feature.
+> Task :composeApp:kmpPartiallyResolvedDependenciesChecker
+> Task :composeApp:cleanJvmTest UP-TO-DATE
+> Task :composeApp:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :composeApp:cleanAllTests UP-TO-DATE
+> Task :composeApp:clean
+> Task :composeApp:convertXmlValueResourcesForJvmMain NO-SOURCE
+> Task :composeApp:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForJvmMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForJvmMain NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForJvmMain NO-SOURCE
+> Task :composeApp:generateComposeResClass
+> Task :composeApp:generateExpectResourceCollectorsForCommonMain
+> Task :composeApp:copyNonXmlValueResourcesForCommonMain
+> Task :composeApp:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :composeApp:generateResourceAccessorsForCommonMain
+> Task :composeApp:generateActualResourceCollectorsForJvmMain
+
+> Task :composeApp:compileKotlinJvm FAILED
+.\gradlew.bat : e: file:///C:/Users/oscar/Documen
+ts/IntelliJ/Proyecto2PSP/composeApp/src/commonMai
+n/kotlin/com/dam2/flashdownloader/data/repository
+/DownloadRepositoryImpl.kt:237:69 Too many 
+arguments for 'constructor(bytesDownloaded: 
+Long, totalBytes: Long, speed: Long = ...): 
+DownloadStatus.Downloading'.
+En línea: 1 Carácter: 1
++ .\gradlew.bat clean 
+:composeApp:compileKotlinJvm --warning-mode all 
+2 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (e:  
+   file:///C:/U...s.Downloading'.:String) [], R  
+  emoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task 
+':composeApp:compileKotlinJvm'.
+> A failure occurred while executing org.jetbrain
+s.kotlin.compilerRunner.GradleCompilerRunnerWithW
+orkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack 
+trace.
+> Run with --info or --debug option to get more 
+log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 3s
+10 actionable tasks: 8 executed, 2 up-to-date
+Configuration cache entry stored.

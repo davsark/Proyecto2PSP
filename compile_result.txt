@@ -1,0 +1,54 @@
+﻿Reusing configuration cache.
+> Task :composeApp:convertXmlValueResourcesForJvmMain NO-SOURCE
+> Task :composeApp:generateExpectResourceCollectorsForCommonMain UP-TO-DATE
+> Task :composeApp:generateComposeResClass UP-TO-DATE
+> Task :composeApp:copyNonXmlValueResourcesForJvmMain NO-SOURCE
+> Task :composeApp:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :composeApp:kmpPartiallyResolvedDependenciesChecker
+> Task :composeApp:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :composeApp:copyNonXmlValueResourcesForCommonMain UP-TO-DATE
+> Task :composeApp:prepareComposeResourcesTaskForJvmMain NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForJvmMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForCommonMain UP-TO-DATE
+> Task :composeApp:generateResourceAccessorsForCommonMain UP-TO-DATE
+> Task :composeApp:generateActualResourceCollectorsForJvmMain UP-TO-DATE
+
+> Task :composeApp:compileKotlinJvm FAILED
+.\gradlew.bat : e: file:///C:/Users/oscar/Documen
+ts/IntelliJ/Proyecto2PSP/composeApp/src/commonMai
+n/kotlin/com/dam2/flashdownloader/data/repository
+/DownloadRepositoryImpl.kt:237:69 Too many 
+arguments for 'constructor(bytesDownloaded: 
+Long, totalBytes: Long, speed: Long = ...): 
+DownloadStatus.Downloading'.
+En línea: 1 Carácter: 1
++ .\gradlew.bat :composeApp:compileKotlinJvm 
+2>&1 | Out-File -FilePath  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (e:  
+   file:///C:/U...s.Downloading'.:String) [], R  
+  emoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task 
+':composeApp:compileKotlinJvm'.
+> A failure occurred while executing org.jetbrain
+s.kotlin.compilerRunner.GradleCompilerRunnerWithW
+orkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack 
+trace.
+> Run with --info or --debug option to get more 
+log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2s
+8 actionable tasks: 2 executed, 6 up-to-date
+Configuration cache entry reused.
