@@ -27,7 +27,7 @@ fun StatisticsPanel(
     Surface(
         modifier = modifier
             .fillMaxHeight()
-            .width(280.dp),
+            .width(320.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = 1.dp
     ) {
