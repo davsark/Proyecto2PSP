@@ -261,6 +261,34 @@ class DownloadViewModel(
     }
 
     /**
+     * Abre la carpeta donde está el archivo descargado
+     */
+    fun openFileLocation(id: String) {
+        viewModelScope.launch {
+            val download = filteredDownloads.value.find { it.id == id }
+            if (download == null) {
+                emitEvent(UiEvent.Error("Descarga no encontrada"))
+                return@launch
+            }
+
+            val filePath = when (val status = download.status) {
+                is com.dam2.flashdownloader.domain.model.DownloadStatus.Completed -> status.filePath
+                else -> {
+                    emitEvent(UiEvent.Error("La descarga debe estar completada para abrir su ubicación"))
+                    return@launch
+                }
+            }
+
+            val success = com.dam2.flashdownloader.utils.FileOpener.openFileLocation(filePath)
+            if (success) {
+                emitEvent(UiEvent.Success("Carpeta abierta"))
+            } else {
+                emitEvent(UiEvent.Error("No se pudo abrir la carpeta del archivo"))
+            }
+        }
+    }
+
+    /**
      * Reintenta una descarga fallida
      */
     fun retryDownload(id: String) {

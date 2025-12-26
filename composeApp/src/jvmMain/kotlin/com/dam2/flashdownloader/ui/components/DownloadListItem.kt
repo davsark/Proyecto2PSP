@@ -38,6 +38,7 @@ fun DownloadListItem(
     onRetry: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
+    onOpenFolder: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     dragHandleModifier: Modifier = Modifier,
@@ -371,6 +372,18 @@ fun DownloadListItem(
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Reintentar",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    is DownloadStatus.Completed -> {
+                        IconButton(
+                            onClick = onOpenFolder,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = "Abrir carpeta",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
