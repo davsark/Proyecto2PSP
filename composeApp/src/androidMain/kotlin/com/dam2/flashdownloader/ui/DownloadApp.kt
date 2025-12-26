@@ -247,26 +247,39 @@ fun DownloadApp(
                     }
                 }
 
-                // Tabs de estado (ScrollableTabRow para ajustar mejor)
-                val statusTabs = listOf(
-                    StatusFilter.ALL,
-                    StatusFilter.ACTIVE,
-                    StatusFilter.QUEUED,
-                    StatusFilter.COMPLETED
-                )
-                
-                ScrollableTabRow(
-                    selectedTabIndex = statusTabs.indexOf(selectedStatus),
-                    edgePadding = 12.dp,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary
+                // Spinner de estados
+                var statusExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = statusExpanded,
+                    onExpandedChange = { statusExpanded = it },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
-                    statusTabs.forEach { status ->
-                        Tab(
-                            selected = selectedStatus == status,
-                            onClick = { selectedStatus = status },
-                            text = { Text(status.displayName) }
-                        )
+                    OutlinedTextField(
+                        value = selectedStatus.displayName,
+                        onValueChange = {},
+                        readOnly = true,
+                        leadingIcon = { Icon(Icons.Default.FilterAlt, null) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        singleLine = true
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = statusExpanded,
+                        onDismissRequest = { statusExpanded = false }
+                    ) {
+                        StatusFilter.entries.forEach { status ->
+                            DropdownMenuItem(
+                                text = { Text(status.displayName) },
+                                onClick = {
+                                    selectedStatus = status
+                                    statusExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
 
