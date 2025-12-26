@@ -312,6 +312,7 @@ fun DownloadApp(
                                 onCancel = { viewModel.cancelDownload(download.id) },
                                 onRemove = { viewModel.removeDownload(download.id) },
                                 onRetry = { viewModel.retryDownload(download.id) },
+                                onOpenFolder = { viewModel.openFileLocation(download.id) },
                                 onClick = { viewModel.showDownloadDetails(download.id) },
                                 dragHandleModifier = if (uiState.searchQuery.isEmpty()) Modifier else Modifier,
                                 dragDropState = if (uiState.searchQuery.isEmpty()) dragDropState else null,

@@ -35,13 +35,13 @@ fun DownloadListItem(
     onCancel: () -> Unit,
     onRemove: () -> Unit,
     onRetry: () -> Unit,
+    onOpenFolder: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     dragHandleModifier: Modifier = Modifier,
     dragDropState: com.dam2.flashdownloader.ui.utils.DragDropState? = null,
     index: Int = -1
 ) {
-    var showMenu by remember { mutableStateOf(false) }
 
     Card(
         modifier = modifier
@@ -63,7 +63,7 @@ fun DownloadListItem(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Primera fila: Icono, nombre y menú
+            // Primera fila: Icono y nombre
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
@@ -107,72 +107,6 @@ fun DownloadListItem(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     StatusBadge(status = download.status)
-                }
-
-                // Menú de opciones
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, "Más opciones")
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        when (download.status) {
-                            is DownloadStatus.Downloading -> {
-                                DropdownMenuItem(
-                                    text = { Text("Pausar") },
-                                    leadingIcon = { Icon(Icons.Default.Pause, null) },
-                                    onClick = {
-                                        onPause()
-                                        showMenu = false
-                                    }
-                                )
-                            }
-                            is DownloadStatus.Paused, is DownloadStatus.Queued -> {
-                                DropdownMenuItem(
-                                    text = { Text("Reanudar") },
-                                    leadingIcon = { Icon(Icons.Default.PlayArrow, null) },
-                                    onClick = {
-                                        onResume()
-                                        showMenu = false
-                                    }
-                                )
-                            }
-                            is DownloadStatus.Failed -> {
-                                DropdownMenuItem(
-                                    text = { Text("Reintentar") },
-                                    leadingIcon = { Icon(Icons.Default.Refresh, null) },
-                                    onClick = {
-                                        onRetry()
-                                        showMenu = false
-                                    }
-                                )
-                            }
-                            else -> {}
-                        }
-
-                        if (download.status.isActive) {
-                            DropdownMenuItem(
-                                text = { Text("Cancelar") },
-                                leadingIcon = { Icon(Icons.Default.Close, null) },
-                                onClick = {
-                                    onCancel()
-                                    showMenu = false
-                                }
-                            )
-                        } else {
-                            DropdownMenuItem(
-                                text = { Text("Eliminar") },
-                                leadingIcon = { Icon(Icons.Default.Delete, null) },
-                                onClick = {
-                                    onRemove()
-                                    showMenu = false
-                                }
-                            )
-                        }
-                    }
                 }
             }
 
@@ -374,9 +308,83 @@ fun DownloadListItem(
                 else -> {}
             }
 
-            // Chip de prioridad
-            Spacer(modifier = Modifier.height(8.dp))
-            PriorityChip(priority = download.priority)
+            // Botones de acción
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Chip de prioridad a la izquierda
+                PriorityChip(priority = download.priority)
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Botones a la derecha
+                when (download.status) {
+                    is DownloadStatus.Downloading -> {
+                        IconButton(
+                            onClick = onPause,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Pause,
+                                contentDescription = "Pausar",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    is DownloadStatus.Paused, is DownloadStatus.Queued -> {
+                        IconButton(
+                            onClick = onResume,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Reanudar",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    is DownloadStatus.Failed -> {
+                        IconButton(
+                            onClick = onRetry,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Reintentar",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    is DownloadStatus.Completed -> {
+                        IconButton(
+                            onClick = onOpenFolder,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = "Abrir carpeta",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    else -> {}
+                }
+
+                // Cancelar o eliminar
+                IconButton(
+                    onClick = if (download.status.isActive) onCancel else onRemove,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (download.status.isActive) Icons.Default.Close else Icons.Default.Delete,
+                        contentDescription = if (download.status.isActive) "Cancelar" else "Eliminar",
+                        tint = DownloadColors.Failed
+                    )
+                }
+            }
         }
     }
 }
