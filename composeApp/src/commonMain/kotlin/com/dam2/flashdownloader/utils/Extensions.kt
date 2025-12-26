@@ -4,10 +4,15 @@ import com.dam2.flashdownloader.domain.model.DownloadItem
 
 /**
  * Extensiones útiles para formateo y utilidades
+ *
+ * NOTA: Estas funciones pertenecen a la capa de Presentación según Clean Architecture.
+ * El formateo de datos para UI NO debe estar en el Domain layer (modelos de negocio).
  */
 
 /**
- * Formatea bytes a una representación legible
+ * Formatea bytes a una representación legible para mostrar en UI
+ * @receiver Long - Cantidad de bytes
+ * @return String - Formato legible (ej: "1.5 MB", "500 KB")
  */
 fun Long.formatBytes(): String {
     return when {
