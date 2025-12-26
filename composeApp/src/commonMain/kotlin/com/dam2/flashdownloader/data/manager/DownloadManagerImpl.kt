@@ -380,27 +380,64 @@ class DownloadManagerImpl(
             // Mover elemento
             val item = _downloadsList.removeAt(currentIndex)
             _downloadsList.add(newIndex, item)
-            
+
+            // ✅ NUEVO: Recalcular prioridades basándose en el orden
+            updatePrioritiesBasedOnOrder()
+
             // Actualizar flow
             _downloads.value = _downloadsList.toList()
         }
-        
+
         // Guardar el nuevo orden masivamente
         val currentList = downloads.value
         repository.updateAll(currentList)
-        
+
         Result.success(Unit)
+    }
+
+    /**
+     * Actualiza las prioridades de todas las descargas basándose en su posición en la lista
+     * Tercio superior = ALTA, tercio medio = MEDIA, tercio inferior = BAJA
+     */
+    private fun updatePrioritiesBasedOnOrder() {
+        val size = _downloadsList.size
+        if (size == 0) return
+
+        val highThreshold = size / 3
+        val mediumThreshold = (size * 2) / 3
+
+        _downloadsList.forEachIndexed { index, download ->
+            val newPriority = when {
+                index < highThreshold -> Priority.HIGH
+                index < mediumThreshold -> Priority.MEDIUM
+                else -> Priority.LOW
+            }
+
+            // Solo actualizar si la prioridad cambió
+            if (download.priority != newPriority) {
+                _downloadsList[index] = download.copy(priority = newPriority)
+            }
+        }
     }
 
     override suspend fun moveUp(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         downloadsMutex.withLock {
             val index = _downloadsList.indexOfFirst { it.id == id }
             if (index <= 0) return@withContext Result.failure(Exception("No se puede mover más arriba"))
-            
+
             val item = _downloadsList.removeAt(index)
             _downloadsList.add(index - 1, item)
+
+            // ✅ NUEVO: Recalcular prioridades basándose en el orden
+            updatePrioritiesBasedOnOrder()
+
             _downloads.value = _downloadsList.toList()
         }
+
+        // Guardar cambios
+        val currentList = downloads.value
+        repository.updateAll(currentList)
+
         Result.success(Unit)
     }
 
@@ -408,11 +445,20 @@ class DownloadManagerImpl(
         downloadsMutex.withLock {
             val index = _downloadsList.indexOfFirst { it.id == id }
             if (index == -1 || index >= _downloadsList.size - 1) return@withContext Result.failure(Exception("No se puede mover más abajo"))
-            
+
             val item = _downloadsList.removeAt(index)
             _downloadsList.add(index + 1, item)
+
+            // ✅ NUEVO: Recalcular prioridades basándose en el orden
+            updatePrioritiesBasedOnOrder()
+
             _downloads.value = _downloadsList.toList()
         }
+
+        // Guardar cambios
+        val currentList = downloads.value
+        repository.updateAll(currentList)
+
         Result.success(Unit)
     }
 
