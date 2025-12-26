@@ -30,10 +30,6 @@ fun TopBar(
     onSettings: () -> Unit,
     onToggleTheme: () -> Unit,
     isDarkTheme: Boolean,
-    selectedCategory: Category?,
-    onCategorySelected: (Category?) -> Unit,
-    selectedStatus: DownloadStatusFilter?,
-    onStatusSelected: (DownloadStatusFilter?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -172,18 +168,6 @@ fun TopBar(
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium
                 )
-
-                // Filtro de categorías
-                CategoryFilterDropdown(
-                    selectedCategory = selectedCategory,
-                    onCategorySelected = onCategorySelected
-                )
-
-                // Filtro de estados
-                StatusFilterDropdown(
-                    selectedStatus = selectedStatus,
-                    onStatusSelected = onStatusSelected
-                )
             }
         }
     }
@@ -250,21 +234,12 @@ private fun StatusFilterDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val statusDisplayName = when (selectedStatus) {
-        DownloadStatusFilter.ACTIVE -> "Activas"
-        DownloadStatusFilter.QUEUED -> "En cola"
-        DownloadStatusFilter.PAUSED -> "Pausadas"
-        DownloadStatusFilter.COMPLETED -> "Completadas"
-        DownloadStatusFilter.FAILED -> "Fallidas"
-        null -> "Todos los estados"
-    }
-
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = it }
     ) {
         OutlinedTextField(
-            value = statusDisplayName,
+            value = selectedStatus?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Todos los estados",
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -285,46 +260,15 @@ private fun StatusFilterDropdown(
                     expanded = false
                 }
             )
-
-            DropdownMenuItem(
-                text = { Text("Activas") },
-                onClick = {
-                    onStatusSelected(DownloadStatusFilter.ACTIVE)
-                    expanded = false
-                }
-            )
-
-            DropdownMenuItem(
-                text = { Text("En cola") },
-                onClick = {
-                    onStatusSelected(DownloadStatusFilter.QUEUED)
-                    expanded = false
-                }
-            )
-
-            DropdownMenuItem(
-                text = { Text("Pausadas") },
-                onClick = {
-                    onStatusSelected(DownloadStatusFilter.PAUSED)
-                    expanded = false
-                }
-            )
-
-            DropdownMenuItem(
-                text = { Text("Completadas") },
-                onClick = {
-                    onStatusSelected(DownloadStatusFilter.COMPLETED)
-                    expanded = false
-                }
-            )
-
-            DropdownMenuItem(
-                text = { Text("Fallidas") },
-                onClick = {
-                    onStatusSelected(DownloadStatusFilter.FAILED)
-                    expanded = false
-                }
-            )
+            DownloadStatusFilter.entries.forEach { status ->
+                DropdownMenuItem(
+                    text = { Text(status.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                    onClick = {
+                        onStatusSelected(status)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }
