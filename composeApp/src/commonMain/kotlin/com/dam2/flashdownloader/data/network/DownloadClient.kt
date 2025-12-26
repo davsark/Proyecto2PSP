@@ -94,6 +94,9 @@ class DownloadClient(private val httpClient: HttpClient) {
             fileWriter.openForWrite(outputPath, startByte > 0)
 
             while (!channel.isClosedForRead && coroutineContext.isActive) {
+                // ✅ Medir tiempo ANTES de leer para control preciso de velocidad
+                val readStartTime = System.currentTimeMillis()
+
                 val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
                 if (bytesRead <= 0) break
 
@@ -102,9 +105,11 @@ class DownloadClient(private val httpClient: HttpClient) {
                 totalBytesDownloaded += bytesRead
                 bytesDownloadedSinceLastEmit += bytesRead
 
-                // Aplicar límite de velocidad si está configurado
+                // ✅ Aplicar límite de velocidad ANTES de emitir progreso
                 if (speedLimitBytesPerSecond != null && speedLimitBytesPerSecond > 0) {
-                    applySpeedLimit(bytesRead.toLong(), speedLimitBytesPerSecond)
+                    val readEndTime = System.currentTimeMillis()
+                    val actualReadTimeMs = readEndTime - readStartTime
+                    applySpeedLimit(bytesRead.toLong(), speedLimitBytesPerSecond, actualReadTimeMs)
                 }
 
                 // Emitir progreso cada 500ms para no saturar la UI
@@ -151,10 +156,22 @@ class DownloadClient(private val httpClient: HttpClient) {
 
     /**
      * Aplica un límite de velocidad mediante delay calculado
+     * @param bytesRead Bytes leídos en esta iteración
+     * @param limitBytesPerSecond Límite de velocidad en bytes/segundo
+     * @param actualTimeMs Tiempo real que tomó leer y escribir los bytes
      */
-    private suspend fun applySpeedLimit(bytesRead: Long, limitBytesPerSecond: Long) {
+    private suspend fun applySpeedLimit(bytesRead: Long, limitBytesPerSecond: Long, actualTimeMs: Long) {
+        // Calcular cuánto tiempo DEBERÍA haber tomado según el límite
         val idealTimeMs = (bytesRead * 1000) / limitBytesPerSecond
-        delay(idealTimeMs)
+
+        // Calcular cuánto tiempo adicional necesitamos esperar
+        val delayNeeded = idealTimeMs - actualTimeMs
+
+        // Solo hacer delay si necesitamos ralentizar (si delayNeeded es positivo)
+        if (delayNeeded > 0) {
+            delay(delayNeeded)
+        }
+        // Si delayNeeded <= 0, significa que ya estamos por debajo del límite, no hacer nada
     }
 
     /**

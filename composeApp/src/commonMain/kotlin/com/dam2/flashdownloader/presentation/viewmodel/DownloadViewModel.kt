@@ -590,6 +590,47 @@ class DownloadViewModel(
     // SECCIÓN 9: UTILIDADES
 
     /**
+     * Verifica la integridad de una descarga completada mediante hash
+     * @param id ID de la descarga
+     * @param expectedHash Hash esperado (MD5, SHA-1 o SHA-256 detectado automáticamente por longitud)
+     */
+    fun verifyDownloadIntegrity(id: String, expectedHash: String) {
+        viewModelScope.launch {
+            // Validar que el hash no esté vacío
+            if (expectedHash.isBlank()) {
+                emitEvent(UiEvent.Error("El hash no puede estar vacío"))
+                return@launch
+            }
+
+            // Validar formato hexadecimal
+            if (!expectedHash.matches(Regex("^[0-9a-fA-F]+$"))) {
+                emitEvent(UiEvent.Error("El hash debe estar en formato hexadecimal"))
+                return@launch
+            }
+
+            // Validar longitud (MD5=32, SHA-1=40, SHA-256=64)
+            if (expectedHash.length !in listOf(32, 40, 64)) {
+                emitEvent(UiEvent.Error("Hash inválido. Longitud esperada: 32 (MD5), 40 (SHA-1) o 64 (SHA-256)"))
+                return@launch
+            }
+
+            emitEvent(UiEvent.Info("Verificando integridad..."))
+
+            downloadManager.verifyIntegrity(id, expectedHash)
+                .onSuccess { isValid ->
+                    if (isValid) {
+                        emitEvent(UiEvent.Success("✓ Verificación exitosa: El archivo es íntegro"))
+                    } else {
+                        emitEvent(UiEvent.Error("✗ Verificación fallida: El hash no coincide (archivo corrupto o modificado)"))
+                    }
+                }
+                .onFailure { error ->
+                    emitEvent(UiEvent.Error("Error al verificar: ${error.message}"))
+                }
+        }
+    }
+
+    /**
      * Emite un evento de UI
      */
     private suspend fun emitEvent(event: UiEvent) {

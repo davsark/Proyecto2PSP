@@ -5,6 +5,8 @@ import com.dam2.flashdownloader.data.network.FileWriter
 import com.dam2.flashdownloader.domain.manager.DownloadManager
 import com.dam2.flashdownloader.domain.model.*
 import com.dam2.flashdownloader.domain.repository.DownloadRepository
+import com.dam2.flashdownloader.utils.HashAlgorithm
+import com.dam2.flashdownloader.utils.HashCalculator
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
@@ -30,7 +32,8 @@ class DownloadManagerImpl(
     private val repository: DownloadRepository,
     private val fileWriterFactory: FileWriterFactory,
     private val downloadPath: String,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val hashCalculator: HashCalculator = HashCalculator()
 ) : DownloadManager {
 
     // SECCIÓN 1: ESTADO Y SINCRONIZACIÓN
@@ -588,10 +591,37 @@ class DownloadManagerImpl(
 
     // SECCIÓN 9: VERIFICACIÓN DE INTEGRIDAD
 
-    override suspend fun verifyIntegrity(id: String, expectedHash: String): Result<Boolean> {
-        // TODO: Implementar verificación de hash (MD5, SHA-256, etc.)
-        // Esta funcionalidad requiere APIs específicas de plataforma
-        return Result.success(true)
+    override suspend fun verifyIntegrity(id: String, expectedHash: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            // Buscar la descarga
+            val download = downloadsMutex.withLock {
+                _downloadsList.find { it.id == id }
+            } ?: return@withContext Result.failure(Exception("Descarga no encontrada"))
+
+            // Verificar que la descarga esté completada
+            if (download.status !is DownloadStatus.Completed) {
+                return@withContext Result.failure(Exception("La descarga debe estar completada para verificar integridad"))
+            }
+
+            // Obtener la ruta del archivo
+            val filePath = (download.status as DownloadStatus.Completed).filePath
+
+            // Detectar el algoritmo basándose en la longitud del hash
+            val algorithm = when (expectedHash.length) {
+                32 -> HashAlgorithm.MD5      // MD5 = 32 caracteres hex
+                40 -> HashAlgorithm.SHA1     // SHA-1 = 40 caracteres hex
+                64 -> HashAlgorithm.SHA256   // SHA-256 = 64 caracteres hex
+                else -> {
+                    // Si no se puede detectar, intentar con SHA-256 por defecto
+                    HashAlgorithm.SHA256
+                }
+            }
+
+            // Verificar el hash usando el HashCalculator
+            hashCalculator.verifyFileHash(filePath, expectedHash, algorithm)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     // SECCIÓN 10: PERSISTENCIA Y CICLO DE VIDA
