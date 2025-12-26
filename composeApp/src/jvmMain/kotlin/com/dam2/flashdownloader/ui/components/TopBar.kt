@@ -84,18 +84,48 @@ fun TopBar(
                     }
 
                     // Pausar todas
-                    IconButton(onClick = onPauseAll) {
-                        Icon(Icons.Default.PauseCircle, "Pausar todas")
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        IconButton(onClick = onPauseAll) {
+                            Icon(Icons.Default.PauseCircle, "Pausar todas")
+                        }
+                        Text(
+                            text = "Pausar todas",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     // Reanudar todas
-                    IconButton(onClick = onResumeAll) {
-                        Icon(Icons.Default.PlayCircle, "Reanudar todas")
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        IconButton(onClick = onResumeAll) {
+                            Icon(Icons.Default.PlayCircle, "Reanudar todas")
+                        }
+                        Text(
+                            text = "Reanudar todas",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     // Limpiar completadas
-                    IconButton(onClick = onClearCompleted) {
-                        Icon(Icons.Default.CleaningServices, "Limpiar completadas")
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        IconButton(onClick = onClearCompleted) {
+                            Icon(Icons.Default.CleaningServices, "Limpiar completadas")
+                        }
+                        Text(
+                            text = "Limpiar completadas",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     // Tema
