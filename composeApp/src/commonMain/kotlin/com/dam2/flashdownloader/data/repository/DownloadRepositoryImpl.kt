@@ -118,6 +118,94 @@ class DownloadRepositoryImpl(
         }
     }
 
+    override suspend fun getHistory(filter: DownloadHistoryFilter): Result<List<DownloadHistoryEntry>> = mutex.withLock {
+        return try {
+            val allDownloads = loadAllDownloadsInternal().map { it.toDomain() }
+
+            val historyEntries = allDownloads
+                .filter { it.status is DownloadStatus.Completed }
+                .filter { download ->
+                    // Filtrar por categoría
+                    filter.category?.let { it == download.category } ?: true
+                }
+                .filter { download ->
+                    // Filtrar por búsqueda
+                    filter.searchQuery?.let { query ->
+                        download.fileName.contains(query, ignoreCase = true) ||
+                        download.url.contains(query, ignoreCase = true)
+                    } ?: true
+                }
+                .filter { download ->
+                    // Filtrar por rango de fechas
+                    filter.dateRange?.let { range ->
+                        download.createdAt in range.start..range.end
+                    } ?: true
+                }
+                .mapNotNull { download ->
+                    val status = download.status as? DownloadStatus.Completed ?: return@mapNotNull null
+
+                    // Calcular duración y velocidad promedio
+                    val downloadDuration = when (val originalStatus = loadAllDownloadsInternal()
+                        .find { it.id == download.id }?.status) {
+                        is SerializableDownloadStatus.Downloading -> originalStatus.elapsedSeconds
+                        is SerializableDownloadStatus.Paused -> originalStatus.elapsedSeconds
+                        else -> 0L
+                    }
+
+                    val averageSpeed = if (downloadDuration > 0) {
+                        status.totalBytes / downloadDuration
+                    } else {
+                        0L
+                    }
+
+                    DownloadHistoryEntry(
+                        id = download.id,
+                        fileName = download.fileName,
+                        url = download.url,
+                        category = download.category,
+                        totalSize = status.totalBytes,
+                        completedAt = download.createdAt,
+                        downloadDuration = downloadDuration,
+                        averageSpeed = averageSpeed,
+                        filePath = status.filePath
+                    )
+                }
+                .sortedByDescending { it.completedAt }
+
+            Result.success(historyEntries)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun clearHistory(): Result<Unit> = mutex.withLock {
+        return try {
+            val downloads = loadAllDownloadsInternal().toMutableList()
+            downloads.removeAll { it.status is SerializableDownloadStatus.Completed }
+            storage.saveDownloads(json.encodeToString(downloads))
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun removeHistoryEntry(id: String): Result<Unit> = mutex.withLock {
+        return try {
+            val downloads = loadAllDownloadsInternal().toMutableList()
+            val download = downloads.find { it.id == id }
+
+            if (download?.status is SerializableDownloadStatus.Completed) {
+                downloads.removeAll { it.id == id }
+                storage.saveDownloads(json.encodeToString(downloads))
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Download is not completed or not found: $id"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun loadAllDownloadsInternal(): List<SerializableDownloadItem> {
         val data = storage.loadDownloads() ?: return emptyList()
         return try {

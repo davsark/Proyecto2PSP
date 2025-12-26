@@ -1,6 +1,8 @@
 package com.dam2.flashdownloader.domain.repository
 
 import com.dam2.flashdownloader.domain.model.DownloadItem
+import com.dam2.flashdownloader.domain.model.DownloadHistoryEntry
+import com.dam2.flashdownloader.domain.model.DownloadHistoryFilter
 
 /**
  * Repositorio para la persistencia de descargas
@@ -51,4 +53,19 @@ interface DownloadRepository {
      * Obtiene el progreso guardado de una descarga
      */
     suspend fun getPartialData(id: String): Result<Long>
+
+    /**
+     * Obtiene el historial de descargas completadas con filtros opcionales
+     */
+    suspend fun getHistory(filter: DownloadHistoryFilter = DownloadHistoryFilter()): Result<List<DownloadHistoryEntry>>
+
+    /**
+     * Limpia todo el historial de descargas completadas
+     */
+    suspend fun clearHistory(): Result<Unit>
+
+    /**
+     * Elimina una entrada específica del historial
+     */
+    suspend fun removeHistoryEntry(id: String): Result<Unit>
 }
